@@ -98,7 +98,7 @@ def mlperf_test_early_exit(iteration, iters_per_epoch, tester, model, distribute
         # sentinel for run finishing
         finished = 0
         if is_main_process():
-            if epoch == 17:
+            if epoch == 14:
                 finished = 1
   #          for result_epoch, (bbox_map, segm_map) in results.items():
    #             print("in else is main ",result_epoch)

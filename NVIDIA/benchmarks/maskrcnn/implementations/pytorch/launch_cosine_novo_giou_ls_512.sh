@@ -1,7 +1,7 @@
 #!/bin/bash
 # this script has novograd + herring
 
-source /shared/gautam/bin/activate
+source /shared/novo_herring/bin/activate
 
 BASE_LR=0.06
 MAX_ITER=4000
@@ -20,7 +20,7 @@ BETA1=0.9
 BETA2=0.25
 LS=0.1
 
-cd /shared/mzanur/training_results_v0.7/NVIDIA/benchmarks/maskrcnn/implementations/pytorch
+cd /shared/gautam/training_results_v0.7/NVIDIA/benchmarks/maskrcnn/implementations/pytorch
 
 python tools/train_mlperf.py --config-file 'configs/e2e_mask_rcnn_R_50_FPN_1x_giou_novo_ls.yaml' \
  DTYPE 'float16' \
@@ -43,5 +43,10 @@ python tools/train_mlperf.py --config-file 'configs/e2e_mask_rcnn_R_50_FPN_1x_gi
  SOLVER.LR_SCHEDULE ${LR_SCHEDULE} \
  TEST.IMS_PER_BATCH ${TEST_IMS_PER_BATCH} \
  MODEL.RPN.FPN_POST_NMS_TOP_N_TRAIN ${FPN_POST_NMS_TOP_N_TRAIN} \
- NHWC True
+ NHWC True \
+ DATALOADER.NUM_WORKERS 1 \
+ SOLVER.CHECKPOINT_PERIOD 230 \
+ SAVE_CHECKPOINTS True \
+ OUTPUT_DIR '/shared/gautam/checkpoints_32_epoch14_bs512_2' \
+ PER_EPOCH_EVAL True
 

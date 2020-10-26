@@ -43,5 +43,10 @@ python tools/train_mlperf.py --config-file 'configs/e2e_mask_rcnn_R_50_FPN_1x_gi
  SOLVER.LR_SCHEDULE ${LR_SCHEDULE} \
  TEST.IMS_PER_BATCH ${TEST_IMS_PER_BATCH} \
  MODEL.RPN.FPN_POST_NMS_TOP_N_TRAIN ${FPN_POST_NMS_TOP_N_TRAIN} \
- NHWC True
+ NHWC True \
+ DATALOADER.NUM_WORKERS 1 \
+ SOLVER.CHECKPOINT_PERIOD 450 \
+ SAVE_CHECKPOINTS True \
+ OUTPUT_DIR '/shared/gautam/checkpoints_32_epoch17_256_5' \
+ PER_EPOCH_EVAL True
 
