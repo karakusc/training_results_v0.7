@@ -1,5 +1,6 @@
 #!/bin/bash
-source /shared/gautam/bin/activate
+# this script has novograd + herring
+source /shared/novo_herring/bin/activate
 
 BASE_LR=0.06
 MAX_ITER=7500
@@ -18,11 +19,10 @@ BETA1=0.9
 BETA2=0.25
 LS=0.1
 
-cd /shared/mzanur/training_results_v0.7/NVIDIA/benchmarks/maskrcnn/implementations/pytorch
+cd /shared/gautam/training_results_v0.7/NVIDIA/benchmarks/maskrcnn/implementations/pytorch
 
-python -u -m bind_launch --nnodes 32 --node_rank $OMPI_COMM_WORLD_RANK --master_addr 192.168.64.219 --master_port 1234 --nsockets_per_node=${NSOCKETS_PER_NODE} \
- --ncores_per_socket=${NCORES_PER_SOCKET} --nproc_per_node=${NPROC_PER_NODE} \
- tools/train_mlperf.py --config-file 'configs/e2e_mask_rcnn_R_50_FPN_1x_giou_novo_ls.yaml' \
+
+python tools/train_mlperf.py --config-file 'configs/e2e_mask_rcnn_R_50_FPN_1x_giou_novo_ls.yaml' \
  DTYPE 'float16' \
  PATHS_CATALOG 'maskrcnn_benchmark/config/paths_catalog.py' \
  DISABLE_REDUCED_LOGGING True \
@@ -44,4 +44,3 @@ python -u -m bind_launch --nnodes 32 --node_rank $OMPI_COMM_WORLD_RANK --master_
  TEST.IMS_PER_BATCH ${TEST_IMS_PER_BATCH} \
  MODEL.RPN.FPN_POST_NMS_TOP_N_TRAIN ${FPN_POST_NMS_TOP_N_TRAIN} \
  NHWC True
-
