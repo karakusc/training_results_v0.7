@@ -47,6 +47,6 @@ python tools/train_mlperf.py --config-file 'configs/e2e_mask_rcnn_R_50_FPN_1x_gi
  DATALOADER.NUM_WORKERS 1 \
  SOLVER.CHECKPOINT_PERIOD 450 \
  SAVE_CHECKPOINTS True \
- OUTPUT_DIR '/shared/gautam/checkpoints_32_epoch17_256_5' \
+ OUTPUT_DIR '/shared/gautam/carl_checkpoints_32_epoch17_256_1' \
  PER_EPOCH_EVAL True
 

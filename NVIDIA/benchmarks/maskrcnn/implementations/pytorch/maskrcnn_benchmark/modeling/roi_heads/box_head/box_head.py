@@ -5,7 +5,7 @@ from torch import nn
 from .roi_box_feature_extractors import make_roi_box_feature_extractor
 from .roi_box_predictors import make_roi_box_predictor
 from .inference import make_roi_box_post_processor
-from .loss import make_roi_box_loss_evaluator
+from .loss_pisa_box_head import make_roi_box_loss_evaluator
 
 
 class ROIBoxHead(torch.nn.Module):
@@ -51,13 +51,18 @@ class ROIBoxHead(torch.nn.Module):
             result = self.post_processor((class_logits, box_regression), proposals)
             return x, result, {}
 
-        loss_classifier, loss_box_reg = self.loss_evaluator(
+        results = self.loss_evaluator(
             [class_logits.float()], [box_regression.float()]
         )
+
+        if len(results) > 2:
+            loss_dict = dict(loss_classifier=results[0], loss_box_reg=results[1], loss_carl=results[2])
+        else:
+            loss_dict = dict(loss_classifier=results[0], loss_box_reg=results[1])
         return (
             x,
             proposals,
-            dict(loss_classifier=loss_classifier, loss_box_reg=loss_box_reg),
+            loss_dict,
         )
 
 
