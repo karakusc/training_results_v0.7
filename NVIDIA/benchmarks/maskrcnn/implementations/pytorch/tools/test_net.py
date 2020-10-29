@@ -6,6 +6,7 @@ from maskrcnn_benchmark.utils.env import setup_environment  # noqa F401 isort:sk
 
 import argparse
 import os
+import time
 
 import torch
 from maskrcnn_benchmark.config import cfg
@@ -14,7 +15,7 @@ from maskrcnn_benchmark.engine.inference import inference
 from maskrcnn_benchmark.modeling.detector import build_detection_model
 from maskrcnn_benchmark.utils.checkpoint import DetectronCheckpointer
 from maskrcnn_benchmark.utils.collect_env import collect_env_info
-from maskrcnn_benchmark.utils.comm import synchronize, get_rank
+from maskrcnn_benchmark.utils.comm import synchronize, get_rank, is_main_process
 from maskrcnn_benchmark.utils.logger import setup_logger
 from maskrcnn_benchmark.utils.miscellaneous import mkdir
 
@@ -72,6 +73,11 @@ def main():
     use_mixed_precision = cfg.DTYPE == 'float16'
     amp_handle = amp.init(enabled=use_mixed_precision, verbose=cfg.AMP_VERBOSE)
 
+    is_fp16 = (cfg.DTYPE == "float16")
+    if is_fp16:
+        # convert model to FP16
+        model.half()
+
     output_dir = cfg.OUTPUT_DIR
     checkpointer = DetectronCheckpointer(cfg, model, save_dir=output_dir)
     _ = checkpointer.load(cfg.MODEL.WEIGHT)
@@ -83,14 +89,18 @@ def main():
         iou_types = iou_types + ("keypoints",)
     output_folders = [None] * len(cfg.DATASETS.TEST)
     dataset_names = cfg.DATASETS.TEST
+
     if cfg.OUTPUT_DIR:
         for idx, dataset_name in enumerate(dataset_names):
             output_folder = os.path.join(cfg.OUTPUT_DIR, "inference", dataset_name)
             mkdir(output_folder)
             output_folders[idx] = output_folder
     data_loaders_val = make_data_loader(cfg, is_train=False, is_distributed=distributed)
+
+    start_test_time = time.time()
+    results = []
     for output_folder, dataset_name, data_loader_val in zip(output_folders, dataset_names, data_loaders_val):
-        inference(
+        result = inference(
             model,
             data_loader_val,
             dataset_name=dataset_name,
@@ -101,8 +111,17 @@ def main():
             expected_results_sigma_tol=cfg.TEST.EXPECTED_RESULTS_SIGMA_TOL,
             output_folder=output_folder,
         )
-        synchronize()
+        results.append(result)
+    end_test_time = time.time()
+    total_testing_time = end_test_time - start_test_time
 
+    if is_main_process():
+        map_results, raw_results = results[0]
+        bbox_map = map_results.results["bbox"]['AP']
+        segm_map = map_results.results["segm"]['AP']
+        print("BBOX_mAP: ", bbox_map, " MASK_mAP: ", segm_map)
+
+    print("Inference time: ", total_testing_time)
 
 if __name__ == "__main__":
     main()
