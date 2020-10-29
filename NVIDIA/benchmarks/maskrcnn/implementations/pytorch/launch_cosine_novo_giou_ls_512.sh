@@ -22,7 +22,9 @@ LS=0.1
 
 cd /shared/gautam/training_results_v0.7/NVIDIA/benchmarks/maskrcnn/implementations/pytorch
 
-python tools/train_mlperf.py --config-file 'configs/e2e_mask_rcnn_R_50_FPN_1x_giou_novo_ls.yaml' \
+/shared/novo_herring/bin/python -u -m bind_launch  --nsockets_per_node=${NSOCKETS_PER_NODE} \
+ --ncores_per_socket=${NCORES_PER_SOCKET} --nproc_per_node=${NPROC_PER_NODE} \
+ tools/train_mlperf.py --config-file 'configs/e2e_mask_rcnn_R_50_FPN_1x_giou_novo_ls.yaml' \
  DTYPE 'float16' \
  PATHS_CATALOG 'maskrcnn_benchmark/config/paths_catalog.py' \
  DISABLE_REDUCED_LOGGING True \
