@@ -6,7 +6,7 @@ Basic training script for PyTorch
 
 # Set up custom environment before nearly anything else is imported
 # NOTE: this should be the first import (no not reorder)
-from maskrcnn_benchmark.utils.env import setup_environment  # noqa F401 isort:skip
+from maskrcnn_benchmark.utils.env import setup_environment # noqa F401 isort:skip
 
 import argparse
 import os
@@ -28,28 +28,37 @@ from maskrcnn_benchmark.engine.tester import test
 from maskrcnn_benchmark.modeling.detector import build_detection_model
 from maskrcnn_benchmark.utils.checkpoint import DetectronCheckpointer
 from maskrcnn_benchmark.utils.collect_env import collect_env_info
-from maskrcnn_benchmark.utils.comm import synchronize, get_rank, is_main_process, get_world_size
+from maskrcnn_benchmark.utils.comm import (broadcast, synchronize, get_local_rank, 
+    get_rank, is_main_process, get_world_size)
 from maskrcnn_benchmark.utils.imports import import_file
 from maskrcnn_benchmark.utils.logger import setup_logger
 from maskrcnn_benchmark.utils.miscellaneous import mkdir
-from maskrcnn_benchmark.utils.mlperf_logger import log_end, log_start, log_event, generate_seeds, broadcast_seeds, barrier, configure_logger
+from maskrcnn_benchmark.utils.mlperf_logger import (log_end, log_start, log_event, 
+    generate_seeds, broadcast_seeds, barrier, configure_logger)
 from maskrcnn_benchmark.utils.async_evaluator import init, get_evaluator, set_epoch_tag
 
 from fp16_optimizer import FP16_Optimizer
 
 from mlperf_logging.mllog import constants
-# See if we can use apex.DistributedDataParallel instead of the torch default,
-# and enable mixed-precision via apex.amp
-# try:
-#     from apex import amp
-#     from apex.parallel import DistributedDataParallel as DDP
-# except ImportError:
-#     raise ImportError('Use APEX for multi-precision via apex.amp')
-import herring.torch as herring
-from herring.torch.parallel import DistributedDataParallel as DDP
-from apex import amp
+
+# check for herring setup
+use_herring = os.environ.get("USE_HERRING_ALL_REDUCE", 0)
+
+if use_herring:
+    import herring.torch as herring
+    from herring.torch.parallel import DistributedDataParallel as DDP
+    from apex import amp
+else:
+    # See if we can use apex.DistributedDataParallel instead of the torch default,
+    # and enable mixed-precision via apex.amp
+    try:
+        from apex import amp
+        from apex.parallel import DistributedDataParallel as DDP
+    except ImportError:
+        raise ImportError('Use APEX for multi-precision via apex.amp')
 
 torch.backends.cudnn.deterministic = True
+
 # Loop over all finished async results, return a dict of { tag : (bbox_map, segm_map) }
 def check_completed_tags():
     # Evaluator is only valid on master rank - all others will have nothing.
@@ -74,43 +83,38 @@ def check_completed_tags():
 
 def mlperf_test_early_exit(iteration, iters_per_epoch, tester, model, distributed, min_bbox_map, min_segm_map):
     # Note: let iters / epoch == 10k, at iter 9999 we've finished epoch 0 and need to test
-  #  print("see these values ", iteration, iters_per_epoch)
     if iteration > 0 and (iteration + 1)% iters_per_epoch == 0:
         synchronize()
         epoch = iteration // iters_per_epoch + 1
-     #   print(epoch)
         log_end(key=constants.EPOCH_STOP, metadata={"epoch_num": epoch})
         log_end(key=constants.BLOCK_STOP, metadata={"first_epoch_num": epoch})
         log_start(key=constants.EVAL_START, metadata={"epoch_num":epoch})
         # set the async evaluator's tag correctly
         set_epoch_tag(epoch)
 
-        #return True
 
         # Note: No longer returns anything, underlying future is in another castle
-#        tester(model=model, distributed=distributed)
+        tester(model=model, distributed=distributed)
         # necessary for correctness
         model.train()
- #   else:
+    else:
         # Otherwise, check for finished async results
-  #      results = check_completed_tags()
+        results = check_completed_tags()
         # on master process, check each result for terminating condition
         # sentinel for run finishing
         finished = 0
         if is_main_process():
-            if epoch == 17:
-                finished = 1
-  #          for result_epoch, (bbox_map, segm_map) in results.items():
-   #             print("in else is main ",result_epoch)
-    #            logger = logging.getLogger('maskrcnn_benchmark.trainer')
-     #           logger.info('bbox mAP: {}, segm mAP: {}'.format(bbox_map, segm_map))
+            for result_epoch, (bbox_map, segm_map) in results.items():
+                print("in else is main ",result_epoch)
+                logger = logging.getLogger('maskrcnn_benchmark.trainer')
+                logger.info('bbox mAP: {}, segm mAP: {}'.format(bbox_map, segm_map))
 
-      #          log_event(key=constants.EVAL_ACCURACY, value={"BBOX" : bbox_map, "SEGM" : segm_map}, metadata={"epoch_num" : result_epoch} )
-      #          log_end(key=constants.EVAL_STOP, metadata={"epoch_num": result_epoch})
+                log_event(key=constants.EVAL_ACCURACY, value={"BBOX" : bbox_map, "SEGM" : segm_map}, metadata={"epoch_num" : result_epoch} )
+                log_end(key=constants.EVAL_STOP, metadata={"epoch_num": result_epoch})
                 # terminating condition
-      #          if bbox_map >= min_bbox_map and segm_map >= min_segm_map:
-      #              logger.info("Target mAP reached, exiting...")
-      #              finished = 1
+                if bbox_map >= min_bbox_map and segm_map >= min_segm_map:
+                    logger.info("Target mAP reached, exiting...")
+                    finished = 1
                     #return True
 
         # We now know on rank 0 whether or not we should terminate
@@ -118,7 +122,7 @@ def mlperf_test_early_exit(iteration, iters_per_epoch, tester, model, distribute
         if get_world_size() > 1:
             with torch.no_grad():
                 finish_tensor = torch.tensor([finished], dtype=torch.int32, device = torch.device('cuda'))
-                herring.broadcast(finish_tensor, 0)
+                broadcast(finish_tensor, 0)
     
                 # If notified, end.
                 if finish_tensor.item() == 1:
@@ -167,8 +171,6 @@ def train(cfg, local_rank, distributed, random_number_generator=None):
     model = build_detection_model(cfg)
     device = torch.device(cfg.MODEL.DEVICE)
     model.to(device)
-    optimizer = make_optimizer(cfg, model)
-    print("DEVICE IS  : {}".format(device))
 
     # Initialize mixed-precision training
     is_fp16 = (cfg.DTYPE == "float16")
@@ -176,6 +178,7 @@ def train(cfg, local_rank, distributed, random_number_generator=None):
         # convert model to FP16
         model.half()
 
+    optimizer = make_optimizer(cfg, model)
     # Optimizer logging
     log_event(key=constants.OPT_NAME, value="sgd_with_momentum")
     log_event(key=constants.OPT_BASE_LR, value=cfg.SOLVER.BASE_LR)
@@ -192,7 +195,10 @@ def train(cfg, local_rank, distributed, random_number_generator=None):
     gc.disable()
 
     if distributed:
-        model = DDP(model, device_ids=[herring.get_local_rank()], broadcast_buffers=False)
+        if not use_herring:
+            model = DDP(model, delay_allreduce=True)
+        else:
+            model = DDP(model, device_ids=[get_local_rank()], broadcast_buffers=False)
 
     arguments = {}
     arguments["iteration"] = 0
@@ -280,7 +286,7 @@ def main():
         help="path to config file",
         type=str,
     )
-    parser.add_argument("--local_rank", type=int, default=herring.get_local_rank())
+    parser.add_argument("--local_rank", type=int, default=get_local_rank())
     parser.add_argument(
         "opts",
         help="Modify config options using the command-line",
@@ -288,12 +294,11 @@ def main():
         nargs=argparse.REMAINDER,
     )
 
-
     args = parser.parse_args()
 
-    num_gpus = herring.get_world_size()
+    num_gpus = int(os.environ["WORLD_SIZE"]) if "WORLD_SIZE" in os.environ else get_world_size()
     args.distributed = num_gpus > 1
-    args.local_rank = herring.get_local_rank()
+    # args.local_rank = get_local_rank()
 
     # if is_main_process:
     #     # Setting logging file parameters for compliance logging
@@ -302,9 +307,12 @@ def main():
     #     constants._FILE_HANDLER = logging.FileHandler(constants.LOG_FILE)
     #     constants._FILE_HANDLER.setLevel(logging.DEBUG)
     #     constants.LOGGER.addHandler(constants._FILE_HANDLER)
-
     if args.distributed:
         torch.cuda.set_device(args.local_rank)
+        if not use_herring:
+            torch.distributed.init_process_group(
+                backend="nccl", init_method="env://"
+            )
         # setting seeds - needs to be timed, so after RUN_START
         if is_main_process():
             master_seed = random.SystemRandom().randint(0, 2 ** 32 - 1)
@@ -312,7 +320,7 @@ def main():
         else:
             seed_tensor = torch.tensor(0, dtype=torch.float32, device=torch.device("cuda"))
 
-        herring.broadcast(seed_tensor, 0)
+        broadcast(seed_tensor, 0)
         master_seed = int(seed_tensor.item())
     else:
         # random master seed, random.SystemRandom() uses /dev/urandom on Unix
@@ -337,7 +345,7 @@ def main():
     logger.info(args)
 
     # generate worker seeds, one seed for every distributed worker
-    worker_seeds = generate_seeds(random_number_generator, herring.get_world_size())
+    worker_seeds = generate_seeds(random_number_generator, get_world_size())
 
     # todo sharath what if CPU
     # broadcast seeds from rank=0 to other workers

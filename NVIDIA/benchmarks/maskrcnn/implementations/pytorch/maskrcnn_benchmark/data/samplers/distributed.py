@@ -3,7 +3,7 @@
 # FIXME remove this once c10d fixes the bug it has
 import math
 import torch
-import herring.torch as herring
+import maskrcnn_benchmark.utils.comm as comm
 from torch.utils.data.sampler import Sampler
 
 
@@ -24,9 +24,9 @@ class DistributedSampler(Sampler):
 
     def __init__(self, dataset, num_replicas=None, rank=None, shuffle=True):
         if num_replicas is None:
-            num_replicas = herring.get_world_size()
+            num_replicas = comm.get_world_size()
         if rank is None:
-            rank = herring.get_rank()
+            rank = comm.get_rank()
         self.dataset = dataset
         self.num_replicas = num_replicas
         self.rank = rank

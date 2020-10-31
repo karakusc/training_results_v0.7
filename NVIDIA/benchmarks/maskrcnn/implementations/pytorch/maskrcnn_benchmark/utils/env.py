@@ -3,7 +3,6 @@ import os
 
 from maskrcnn_benchmark.utils.imports import import_file
 
-
 def setup_environment():
     """Perform environment setup work. The default setup is a no-op, but this
     function allows the user to specify a Python source file that performs
@@ -15,7 +14,6 @@ def setup_environment():
     else:
         # The default setup is a no-op
         pass
-
 
 def setup_custom_environment(custom_module_path):
     """Load custom environment setup from a Python source file and run the setup
@@ -35,3 +33,4 @@ def setup_custom_environment(custom_module_path):
 
 # Force environment setup when this module is imported
 setup_environment()
+

@@ -1,12 +1,12 @@
 #!/bin/bash
-# this script has novograd + herring
+source /shared/herring_mzanur/bin/activate
+echo $LD_LIBRARY_PATH
+echo $PATH
 
-source /shared/novo_herring/bin/activate
-
-BASE_LR=0.06
+BASE_LR=0.04
 MAX_ITER=4000
-WARMUP_FACTOR=0.000133
-WARMUP_ITERS=1000
+WARMUP_FACTOR=0.0133
+WARMUP_ITERS=500
 TRAIN_IMS_PER_BATCH=512
 TEST_IMS_PER_BATCH=256
 WEIGHT_DECAY=1.25e-3
@@ -20,13 +20,15 @@ BETA1=0.9
 BETA2=0.25
 LS=0.1
 
-cd /shared/gautam/training_results_v0.7/NVIDIA/benchmarks/maskrcnn/implementations/pytorch
+#cd /shared/mzanur/training_results_v0.7/NVIDIA/benchmarks/maskrcnn/implementations/pytorch_cleanup
 
-python tools/train_mlperf.py --config-file 'configs/e2e_mask_rcnn_R_50_FPN_1x_giou_novo_ls.yaml' \
+/shared/herring_mzanur/bin/python -u -m bind_launch --nnodes 32 --node_rank $OMPI_COMM_WORLD_RANK --master_addr 192.168.69.5 --master_port 1234 --nsockets_per_node=${NSOCKETS_PER_NODE} \
+ --ncores_per_socket=${NCORES_PER_SOCKET} --nproc_per_node=${NPROC_PER_NODE} \
+ tools/train_mlperf.py --config-file 'configs/e2e_mask_rcnn_R_50_FPN_1x_giou_novo_ls.yaml' \
  DTYPE 'float16' \
  PATHS_CATALOG 'maskrcnn_benchmark/config/paths_catalog.py' \
  DISABLE_REDUCED_LOGGING True \
- INPUT.ADD_NOISE True \
+ INPUT.ADD_NOISE False \
  SOLVER.BASE_LR ${BASE_LR} \
  SOLVER.WEIGHT_DECAY ${WEIGHT_DECAY} \
  SOLVER.MAX_ITER ${MAX_ITER} \
@@ -43,10 +45,5 @@ python tools/train_mlperf.py --config-file 'configs/e2e_mask_rcnn_R_50_FPN_1x_gi
  SOLVER.LR_SCHEDULE ${LR_SCHEDULE} \
  TEST.IMS_PER_BATCH ${TEST_IMS_PER_BATCH} \
  MODEL.RPN.FPN_POST_NMS_TOP_N_TRAIN ${FPN_POST_NMS_TOP_N_TRAIN} \
- NHWC True \
- DATALOADER.NUM_WORKERS 1 \
- SOLVER.CHECKPOINT_PERIOD 230 \
- SAVE_CHECKPOINTS True \
- OUTPUT_DIR '/shared/gautam/carl_checkpoints_32_epoch17_bs512_1' \
- PER_EPOCH_EVAL True
+ NHWC True
 

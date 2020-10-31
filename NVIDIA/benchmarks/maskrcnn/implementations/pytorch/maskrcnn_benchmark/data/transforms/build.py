@@ -24,7 +24,8 @@ def build_transforms(cfg, is_train=True, is_fp16=True):
               normalize_transform,
           ]
     if cfg.INPUT.ADD_NOISE:
-        ops.append(T.RandomMultiplicativeNoise(flip_prob, mean=0.0, std=0.2))
+        noise_prob = 0.5
+        ops.append(T.RandomMultiplicativeNoise(noise_prob, mean=0.0, std=0.2))
     if is_fp16:
         ops.append(T.ToHalf())
     transform = T.Compose(ops)

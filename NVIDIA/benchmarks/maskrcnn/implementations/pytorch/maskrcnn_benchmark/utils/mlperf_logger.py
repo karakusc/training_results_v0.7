@@ -19,7 +19,7 @@ import torch
 import numpy as np
 from mlperf_logging import mllog
 from mlperf_logging.mllog import constants
-import herring.torch as herring
+import maskrcnn_benchmark.utils.comm as comm
 
 mllogger = mllog.get_mllogger()
 
@@ -94,14 +94,14 @@ def barrier():
     doesn't implement barrier for NCCL backend.
     Calls all_reduce on dummy tensor and synchronizes with GPU.
     """
-    herring.barrier()
+    comm.synchronize()
 
 
 def get_rank():
     """
     Gets distributed rank or returns zero if distributed is not initialized.
     """
-    return herring.get_rank()
+    return comm.get_rank()
 
 def generate_seeds(rng, size):
     seeds = [rng.randint(0, 2**32 - 1) for _ in range(size)]
@@ -109,7 +109,7 @@ def generate_seeds(rng, size):
 
 def broadcast_seeds(seeds, device):
     seeds_tensor = torch.LongTensor(seeds).to(device)
-    herring.broadcast(seeds_tensor, 0)
+    comm.broadcast(seeds_tensor, 0)
     seeds = seeds_tensor.tolist()
     return seeds
 

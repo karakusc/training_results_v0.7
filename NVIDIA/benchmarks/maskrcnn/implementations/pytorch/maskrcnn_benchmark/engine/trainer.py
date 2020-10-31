@@ -6,11 +6,11 @@ import time
 
 import torch
 
-from maskrcnn_benchmark.utils.comm import get_world_size, is_main_process, synchronize
+import maskrcnn_benchmark.utils.comm as comm
+# from maskrcnn_benchmark.utils.comm import get_world_size, is_main_process, synchronize, reduce
 from maskrcnn_benchmark.utils.metric_logger import MetricLogger
 
 from apex import amp
-import herring.torch as herring
 
 def reduce_loss_dict(loss_dict):
     """
@@ -18,7 +18,7 @@ def reduce_loss_dict(loss_dict):
     0 has the averaged results. Returns a dict with the same fields as
     loss_dict, after reduction.
     """
-    world_size = get_world_size()
+    world_size = comm.get_world_size()
     if world_size < 2:
         return loss_dict
     with torch.no_grad():
@@ -28,8 +28,8 @@ def reduce_loss_dict(loss_dict):
             loss_names.append(k)
             all_losses.append(loss_dict[k])
         all_losses = torch.stack(all_losses, dim=0)
-        herring.reduce(all_losses, dst=0)
-        if herring.get_rank() == 0:
+        comm.reduce(all_losses, dst=0)
+        if comm.get_rank() == 0:
             # only main process gets accumulated, so only divide by
             # world_size in this case
             all_losses /= world_size
@@ -92,7 +92,7 @@ def do_train(
             next_images, next_targets = _prefetch()
             yield current_images, current_targets
     
-    synchronize()
+    comm.synchronize()
     optimizer.zero_grad()
     for iteration, (images, targets) in enumerate(prefetcher(iter(data_loader)), start_iter):
         if per_iter_start_callback_fn is not None:
