@@ -20,7 +20,7 @@ BETA1=0.9
 BETA2=0.25
 LS=0.1
 
-cd /shared/mzanur/training_results_v0.7/NVIDIA/benchmarks/maskrcnn/implementations/pytorch
+# cd /shared/mzanur/training_results_v0.7/NVIDIA/benchmarks/maskrcnn/implementations/pytorch
 BASEDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 #  -u -m bind_launch --master_addr=192.168.64.212 --nsockets_per_node=${NSOCKETS_PER_NODE} \
 # --ncores_per_socket=${NCORES_PER_SOCKET} --nproc_per_node=${NPROC_PER_NODE} \
@@ -28,7 +28,8 @@ BASEDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 for BETA2 in 0.2 0.22 0.25 0.27 0.3 0.35 0.4
 do
 /shared/herring_mzanur/bin/herringrun -n 32 -c /shared/herring_mzanur/ \
- /shared/herring_mzanur/bin/python tools/train_mlperf.py --config-file 'configs/e2e_mask_rcnn_R_50_FPN_1x_giou_novo_ls.yaml' \
+ USE_HERRING_ALL_REDUCE=1 /shared/herring_mzanur/bin/python tools/train_mlperf.py \
+ --config-file 'configs/e2e_mask_rcnn_R_50_FPN_1x_giou_novo_ls.yaml' \
  DTYPE 'float16' \
  PATHS_CATALOG 'maskrcnn_benchmark/config/paths_catalog.py' \
  DISABLE_REDUCED_LOGGING True \

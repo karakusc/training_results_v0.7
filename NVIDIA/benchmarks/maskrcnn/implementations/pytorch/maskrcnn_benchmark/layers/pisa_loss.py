@@ -117,26 +117,27 @@ def carl_loss(cls_score,
     """
     if pos_label_inds.numel() == 0:
         return dict(loss_carl=cls_score.sum()[None] * 0.)
-
     # multiply pos_cls_score with the corresponding bbox weight
     # and remain gradient
     if sigmoid:
         pos_cls_score = cls_score.sigmoid()[pos_label_inds, pos_labels]
     else:
         pos_cls_score = cls_score.softmax(-1)[pos_label_inds, pos_labels]
-    carl_loss_weights = (bias + (1 - bias) * pos_cls_score).pow(k)
+    # currently k = 1 
+    carl_loss_weights = bias + (1. - bias) * pos_cls_score #(bias + (1 - bias) * pos_cls_score).pow(k)
 
     # normalize carl_loss_weight to make its sum equal to num positive
     num_pos = float(pos_cls_score.size(0))
     weight_ratio = num_pos / carl_loss_weights.sum()
     carl_loss_weights *= weight_ratio
 
-
     ori_loss_reg = loss_bbox(
         bbox_pred,
-        bbox_targets) / avg_factor
-    loss_carl = (ori_loss_reg * carl_loss_weights[:, None]).sum()
-    return loss_carl[None]
+        bbox_targets,
+        reduction_override='none') / avg_factor
+    #loss_carl = (ori_loss_reg * carl_loss_weights[:, None]).sum()
+    loss_carl = (ori_loss_reg * carl_loss_weights).sum()
+    return loss_carl 
 
 
 def bbox_overlaps(bboxes1, bboxes2, mode='iou', is_aligned=False, eps=1e-6):

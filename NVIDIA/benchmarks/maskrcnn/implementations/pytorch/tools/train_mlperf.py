@@ -163,7 +163,6 @@ def train(cfg, local_rank, distributed, random_number_generator=None):
     device = torch.device(cfg.MODEL.DEVICE)
     model.to(device)
     optimizer = make_optimizer(cfg, model)
-    print("DEVICE IS  : {}".format(device))
 
     # Initialize mixed-precision training
     is_fp16 = (cfg.DTYPE == "float16")
@@ -326,7 +325,7 @@ def main():
     if output_dir:
         mkdir(output_dir)
 
-    logger = setup_logger("maskrcnn_benchmark", output_dir, get_rank())
+    logger = setup_logger("maskrcnn_benchmark", output_dir, get_rank(), "logger-{}.txt".format(master_seed))
     logger.info("Using {} GPUs".format(num_gpus))
     logger.info(args)
 

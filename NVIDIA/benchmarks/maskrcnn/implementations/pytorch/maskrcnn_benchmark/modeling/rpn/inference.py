@@ -331,7 +331,7 @@ class RPNPostProcessor(torch.nn.Module):
         objectness_gen = objectness_gen.reshape(-1)
         objectness_kept = objectness_gen
         # post NMS topN
-        num_keeps = keep.reshape(-1).nonzero().squeeze(1).size(0)
+        num_keeps = keep.reshape(-1).nonzero(as_tuple=False).squeeze(1).size(0)
 
         _, inds_sorted = torch.topk(objectness_kept, min(self.fpn_post_nms_top_n,num_keeps), dim=0, sorted=False)
         inds_sorted, _ = inds_sorted.sort()

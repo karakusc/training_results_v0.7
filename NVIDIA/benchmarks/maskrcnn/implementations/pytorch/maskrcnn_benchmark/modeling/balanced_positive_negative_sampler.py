@@ -99,7 +99,7 @@ class BalancedPositiveNegativeSampler(object):
             if num_images>1:
                 consec[1:,:] = consec[1:,:] + num_pos_samples_cum[:-1].view(num_images-1,1)
             sampling_inds = consec.masked_select(subsampling_mask)
-            pos_samples_inds = pos_samples_mask.view(-1).nonzero().squeeze(1)
+            pos_samples_inds = pos_samples_mask.view(-1).nonzero(as_tuple=False).squeeze(1)
             pos_subsampled_inds = pos_samples_inds[sampling_inds]
             ## do the same for negative samples as well
             neg_samples_mask = matched_idxs_cat == 0
@@ -117,7 +117,7 @@ class BalancedPositiveNegativeSampler(object):
             if num_images>1:
                 consec[1:,:] = consec[1:,:] + num_neg_samples_cum[:-1].view(num_images-1,1)
             sampling_inds = consec.masked_select(subsampling_mask)
-            neg_samples_inds = neg_samples_mask.view(-1).nonzero().squeeze(1)
+            neg_samples_inds = neg_samples_mask.view(-1).nonzero(as_tuple=False).squeeze(1)
             neg_subsampled_inds = neg_samples_inds[sampling_inds]
             return pos_subsampled_inds, neg_subsampled_inds
         else:
@@ -138,7 +138,7 @@ class BalancedPositiveNegativeSampler(object):
             if num_images>1:
                 consec[1:,:] = consec[1:,:] + num_pos_samples_cum[:-1].view(num_images-1,1)
             sampling_inds = consec.masked_select(subsampling_mask)
-            pos_samples_inds = pos_samples_mask.view(-1).nonzero().squeeze(1)
+            pos_samples_inds = pos_samples_mask.view(-1).nonzero(as_tuple=False).squeeze(1)
             pos_subsampled_inds = pos_samples_inds[sampling_inds]
     
             neg_samples_mask = (matched_idxs_cat == 0) *( objectness>-1)
@@ -156,7 +156,7 @@ class BalancedPositiveNegativeSampler(object):
             if num_images>1:
                 consec[1:,:] = consec[1:,:] + num_neg_samples_cum[:-1].view(num_images-1,1)
             sampling_inds = consec.masked_select(subsampling_mask)
-            neg_samples_inds = neg_samples_mask.view(-1).nonzero().squeeze(1)
+            neg_samples_inds = neg_samples_mask.view(-1).nonzero(as_tuple=False).squeeze(1)
             neg_subsampled_inds = neg_samples_inds[sampling_inds]
             return pos_subsampled_inds, neg_subsampled_inds, num_pos_subsamples, num_subsamples
 
