@@ -3,10 +3,10 @@
 
 #source /shared/herring_mzanur/bin/activate
 
-BASE_LR=0.05
-MAX_ITER=4000
-WARMUP_FACTOR=0.000133
-WARMUP_ITERS=1000
+BASE_LR=0.06
+MAX_ITER=3700
+WARMUP_FACTOR=0.0133
+WARMUP_ITERS=500
 TRAIN_IMS_PER_BATCH=512
 TEST_IMS_PER_BATCH=256
 WEIGHT_DECAY=1.25e-3
@@ -22,18 +22,14 @@ LS=0.1
 
 # cd /shared/mzanur/training_results_v0.7/NVIDIA/benchmarks/maskrcnn/implementations/pytorch
 BASEDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
-#  -u -m bind_launch --master_addr=192.168.64.212 --nsockets_per_node=${NSOCKETS_PER_NODE} \
-# --ncores_per_socket=${NCORES_PER_SOCKET} --nproc_per_node=${NPROC_PER_NODE} \
-#
-for BETA2 in 0.2 0.22 0.25 0.27 0.3 0.35 0.4
-do
 /shared/herring_mzanur/bin/herringrun -n 32 -c /shared/herring_mzanur/ \
  USE_HERRING_ALL_REDUCE=1 /shared/herring_mzanur/bin/python tools/train_mlperf.py \
  --config-file 'configs/e2e_mask_rcnn_R_50_FPN_1x_giou_novo_ls.yaml' \
  DTYPE 'float16' \
  PATHS_CATALOG 'maskrcnn_benchmark/config/paths_catalog.py' \
  DISABLE_REDUCED_LOGGING True \
- INPUT.ADD_NOISE True \
+ INPUT.ADD_NOISE False \
+ DATALOADER.NUM_WORKERS 12 \
  SOLVER.BASE_LR ${BASE_LR} \
  SOLVER.WEIGHT_DECAY ${WEIGHT_DECAY} \
  SOLVER.MAX_ITER ${MAX_ITER} \
@@ -51,4 +47,3 @@ do
  TEST.IMS_PER_BATCH ${TEST_IMS_PER_BATCH} \
  MODEL.RPN.FPN_POST_NMS_TOP_N_TRAIN ${FPN_POST_NMS_TOP_N_TRAIN} \
  NHWC True | tee ${BASEDIR}/log_${BETA2}
-done

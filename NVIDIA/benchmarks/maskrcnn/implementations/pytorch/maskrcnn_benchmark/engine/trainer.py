@@ -7,7 +7,6 @@ import time
 import torch
 
 import maskrcnn_benchmark.utils.comm as comm
-# from maskrcnn_benchmark.utils.comm import get_world_size, is_main_process, synchronize, reduce
 from maskrcnn_benchmark.utils.metric_logger import MetricLogger
 
 from apex import amp
@@ -35,6 +34,7 @@ def reduce_loss_dict(loss_dict):
             all_losses /= world_size
         reduced_losses = {k: v for k, v in zip(loss_names, all_losses)}
     return reduced_losses
+
 
 # Instead of zeroing, set parameter grads to None
 # Prevents extraneous copy as we're not accumulating
@@ -123,8 +123,6 @@ def do_train(
         # Otherwise apply loss scaling for mixed-precision recipe
         # with optimizer.scale_loss(losses) as scaled_losses:
         optimizer.backward(losses)
-        #AS: Introduce gradient clipping here
-        # torch.nn.utils.clip_grad_norm_(model.parameters(), 5.0)
         optimizer.step()
         # set_grads_to_none(model)
         optimizer.zero_grad()

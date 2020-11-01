@@ -172,15 +172,15 @@ def train(cfg, local_rank, distributed, random_number_generator=None):
     device = torch.device(cfg.MODEL.DEVICE)
     model.to(device)
 
+    optimizer = make_optimizer(cfg, model)
     # Initialize mixed-precision training
     is_fp16 = (cfg.DTYPE == "float16")
     if is_fp16:
         # convert model to FP16
         model.half()
 
-    optimizer = make_optimizer(cfg, model)
     # Optimizer logging
-    log_event(key=constants.OPT_NAME, value="sgd_with_momentum")
+    log_event(key=constants.OPT_NAME, value=cfg.SOLVER.OPTIMIZER)
     log_event(key=constants.OPT_BASE_LR, value=cfg.SOLVER.BASE_LR)
     log_event(key=constants.OPT_LR_WARMUP_STEPS, value=cfg.SOLVER.WARMUP_ITERS)
     log_event(key=constants.OPT_LR_WARMUP_FACTOR, value=cfg.SOLVER.WARMUP_FACTOR)
@@ -198,7 +198,7 @@ def train(cfg, local_rank, distributed, random_number_generator=None):
         if not use_herring:
             model = DDP(model, delay_allreduce=True)
         else:
-            model = DDP(model, device_ids=[get_local_rank()], broadcast_buffers=False)
+            model = DDP(model, device_ids=[get_local_rank()], broadcast_buffers=False, bucket_cap_mb=25)
 
     arguments = {}
     arguments["iteration"] = 0
@@ -215,7 +215,8 @@ def train(cfg, local_rank, distributed, random_number_generator=None):
     arguments.update(extra_checkpoint_data)
     
     if is_fp16:
-        optimizer = FP16_Optimizer(optimizer, dynamic_loss_scale=True)
+        import apex
+        optimizer = apex.fp16_utils.fp16_optimizer.FP16_Optimizer(optimizer, dynamic_loss_scale=True)
 
     log_end(key=constants.INIT_STOP)
     barrier()

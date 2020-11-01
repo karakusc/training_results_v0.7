@@ -219,7 +219,7 @@ class RPNPostProcessor(torch.nn.Module):
           for j in range(0, num_images):
             end_idx = start_idx + num_boxes_batched[ptr]
             keep_per_box = keep_inds_batched[start_idx:end_idx]
-            inds_per_box = keep_per_box.nonzero().squeeze(1)
+            inds_per_box = keep_per_box.nonzero(as_tuple=False).squeeze(1)
             keep_size = min(inds_per_box.size(0), self.post_nms_top_n)
             inds_per_box = inds_per_box[:keep_size]
             per_level_boxlist.append(sampled_boxes[i][j][inds_per_box])
@@ -331,7 +331,7 @@ class RPNPostProcessor(torch.nn.Module):
         objectness_gen = objectness_gen.reshape(-1)
         objectness_kept = objectness_gen
         # post NMS topN
-        num_keeps = keep.reshape(-1).nonzero().squeeze(1).size(0)
+        num_keeps = keep.reshape(-1).nonzero(as_tuple=False).squeeze(1).size(0)
 
         _, inds_sorted = torch.topk(objectness_kept, min(self.fpn_post_nms_top_n,num_keeps), dim=0, sorted=False)
         inds_sorted, _ = inds_sorted.sort()

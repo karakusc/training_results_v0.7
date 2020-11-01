@@ -220,7 +220,7 @@ class BoxList(object):
     def __getitem__(self, item):
         item_type = item.type()
         if item_type=='torch.ByteTensor' or item_type=='torch.cuda.ByteTensor':
-          item = torch.nonzero(item).squeeze(1)
+          item = torch.nonzero(item, as_tuple=False).squeeze(1)
         item = item.to(device=self.bbox.device)
         bbox = BoxList(self.bbox.index_select(0,item), self.size, self.mode)
         for k, v in self.extra_fields.items():
