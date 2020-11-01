@@ -21,7 +21,7 @@ MODEL:
     PREDICTOR: "FPNPredictor"
     DECODE: True
     LOSS: "GIoULoss"
-    CARL: False
+    CARL: True
     ISR_P: False
     ISR_N: False
   ROI_MASK_HEAD:

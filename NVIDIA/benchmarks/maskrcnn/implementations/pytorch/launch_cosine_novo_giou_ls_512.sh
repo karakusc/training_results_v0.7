@@ -3,7 +3,7 @@ source /shared/herring_mzanur/bin/activate
 echo $LD_LIBRARY_PATH
 echo $PATH
 
-BASE_LR=0.06
+BASE_LR=0.05
 MAX_ITER=3700
 WARMUP_FACTOR=0.0133
 WARMUP_ITERS=500

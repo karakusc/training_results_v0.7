@@ -45,7 +45,7 @@ class PISALossComputation(object):
         self.fg_bg_sampler = fg_bg_sampler
         self.box_coder = box_coder
         self.cls_agnostic_bbox_reg = cls_agnostic_bbox_reg
-        self.giou_loss = GIoULoss(eps=1e-6, reduction="mean", loss_weight=10.0)
+        self.giou_loss = GIoULoss(eps=1e-6, reduction="mean", loss_weight=5.0)
         self.cls_loss = CrossEntropyLoss()
         self.decode = decode
         self.loss = loss
@@ -334,7 +334,7 @@ class PISALossComputation(object):
                     pos_box_target,
                     self.giou_loss,
                     k=1,
-                    bias=0.2,
+                    bias=0.3,
                     avg_factor=regression_targets.size(0),
                     num_class=80)
 
