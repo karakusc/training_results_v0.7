@@ -129,6 +129,9 @@ def process_predictions(masker, masks, boxes, boxes_wh, img_info, mapped_labels,
 def process_predictions_mp(args):
     return process_predictions(*args)
 
+def evaluate_coco__mp(args):
+    return evaluate_coco(*args)
+
 def infer_coco_eval(model, data_loader, cfg, pool_size=8):
     process_pool = Pool(pool_size)
     eval_iterator = iter(data_loader)
@@ -156,5 +159,14 @@ def infer_coco_eval(model, data_loader, cfg, pool_size=8):
     coco_results['segm'] = list(itertools.chain.from_iterable(all_gather(mask_results)))
     coco_results['bbox'] = list(itertools.chain.from_iterable(all_gather(box_results)))
     if is_main_process():
-        eval_res = evaluate_coco(data_loader.dataset, coco_results, ("bbox","segm"), cfg.OUTPUT_DIR)
+        eval_pool = Pool(2)
+        mask_res = eval_pool.apply_async(evaluate_coco, 
+                                         (data_loader.dataset, coco_results, ("bbox",), cfg.OUTPUT_DIR))
+        segm_res = eval_pool.apply_async(evaluate_coco, 
+                                         (data_loader.dataset, coco_results, ("segm",), cfg.OUTPUT_DIR))
+        while not mask_res.ready() and not segm_res.ready():
+            continue
+        eval_res = {'bbox': mask_res.get().results['bbox']['AP'],
+                    'segm': segm_res.get().results['segm']['AP']}
+        eval_pool.close()
     return eval_res
