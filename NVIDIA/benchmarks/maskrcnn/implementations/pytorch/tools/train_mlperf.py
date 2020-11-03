@@ -36,6 +36,7 @@ from maskrcnn_benchmark.utils.miscellaneous import mkdir
 from maskrcnn_benchmark.utils.mlperf_logger import (log_end, log_start, log_event, 
     generate_seeds, broadcast_seeds, barrier, configure_logger)
 from maskrcnn_benchmark.utils.async_evaluator import init, get_evaluator, set_epoch_tag
+from maskrcnn_benchmark.data.datasets.evaluation.coco.coco_eval_np import infer_coco_eval
 
 from fp16_optimizer import FP16_Optimizer
 
@@ -81,7 +82,7 @@ def check_completed_tags():
     return {}
 
 
-def mlperf_test_early_exit(iteration, iters_per_epoch, tester, model, distributed, min_bbox_map, min_segm_map):
+def mlperf_test_early_exit(iteration, iters_per_epoch, tester, model, data_loader, cfg, min_bbox_map=.377, min_segm_map=.339):
     # Note: let iters / epoch == 10k, at iter 9999 we've finished epoch 0 and need to test
     if iteration > 0 and (iteration + 1)% iters_per_epoch == 0:
         synchronize()
@@ -94,10 +95,40 @@ def mlperf_test_early_exit(iteration, iters_per_epoch, tester, model, distribute
 
 
         # Note: No longer returns anything, underlying future is in another castle
-        tester(model=model, distributed=distributed)
+        # tester(model=model, distributed=distributed)
         # necessary for correctness
+        model.eval()
+        eval_result = tester(model, data_loader, cfg)
         model.train()
-    else:
+        finished = 0
+        if is_main_process():
+            bbox_map = eval_result.results['bbox']['AP']
+            segm_map = eval_result.results['segm']['AP']
+            log_event(key=constants.EVAL_ACCURACY, 
+                      value={"BBOX" : bbox_map, "SEGM" : segm_map}, 
+                      metadata={"epoch_num" : epoch} )
+            if bbox_map>=min_bbox_map and segm_map>=min_segm_map:
+                finished = 1
+            if epoch == 17:
+                finished = 1
+        synchronize()
+        if get_world_size() > 1:
+            with torch.no_grad():
+                finish_tensor = torch.tensor([finished], dtype=torch.int32, device = torch.device('cuda'))
+                if use_herring:
+                    herring.broadcast(finish_tensor, 0)
+                else:
+                    torch.distributed.broadcast(finish_tensor, 0)
+    
+                # If notified, end.
+                if finish_tensor.item() == 1:
+                    return True
+        else:
+            # Single GPU, don't need to create tensor to bcast, just use value directly
+            if finished == 1:
+                return True
+    
+    '''else:
         # Otherwise, check for finished async results
         results = check_completed_tags()
         # on master process, check each result for terminating condition
@@ -133,7 +164,11 @@ def mlperf_test_early_exit(iteration, iters_per_epoch, tester, model, distribute
                 return True
 
     # Otherwise, default case, continue
+    return False'''
+    # Otherwise, default case, continue
     return False
+    
+    
 
 def mlperf_log_epoch_start(iteration, iters_per_epoch):
     # First iteration:
@@ -230,6 +265,13 @@ def train(cfg, local_rank, distributed, random_number_generator=None):
         start_iter=arguments["iteration"],
         random_number_generator=random_number_generator,
     )
+    eval_data_loader = make_data_loader(
+        cfg,
+        is_train=False,
+        is_distributed=distributed,
+        start_iter=arguments["iteration"],
+        random_number_generator=random_number_generator,
+    )[0]
     log_event(key=constants.TRAIN_SAMPLES, value=len(data_loader))
 
     checkpoint_period = cfg.SOLVER.CHECKPOINT_PERIOD
@@ -240,9 +282,12 @@ def train(cfg, local_rank, distributed, random_number_generator=None):
         per_iter_callback_fn = functools.partial(
                 mlperf_test_early_exit,
                 iters_per_epoch=iters_per_epoch,
-                tester=functools.partial(test, cfg=cfg),
+                # tester=functools.partial(test, cfg=cfg),
+                tester=infer_coco_eval,
                 model=model,
-                distributed=distributed,
+                # distributed=distributed,
+                data_loader=eval_data_loader,
+                cfg=cfg,
                 min_bbox_map=cfg.MLPERF.MIN_BBOX_MAP,
                 min_segm_map=cfg.MLPERF.MIN_SEGM_MAP)
     else:
