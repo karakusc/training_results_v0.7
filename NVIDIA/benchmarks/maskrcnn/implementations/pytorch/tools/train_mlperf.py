@@ -97,7 +97,7 @@ def mlperf_checkpoint_early_exit(iteration, iters_per_epoch, checkpointer, cfg):
             if len(done_file)>0:
                 finished = 1
             else:
-                checkpointer.save("epoch_{}".format(epoch))
+                checkpointer.save("epoch_{}".format(epoch), nhwc=cfg.NHWC)
         if get_world_size() > 1:
             with torch.no_grad():
                 finish_tensor = torch.tensor([finished], dtype=torch.int32, device = torch.device('cuda'))
