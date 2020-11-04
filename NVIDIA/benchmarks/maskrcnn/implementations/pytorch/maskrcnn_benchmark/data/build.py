@@ -15,6 +15,13 @@ from . import samplers
 from .collate_batch import BatchCollator
 from .transforms import build_transforms
 
+from maskrcnn_benchmark.utils.herring_env import is_herring
+
+run_herring = False
+
+if is_herring():
+    import herring.torch as herring
+    run_herring = True
 
 def build_dataset(dataset_list, transforms, dataset_catalog, is_train=True):
     """
@@ -62,7 +69,11 @@ def build_dataset(dataset_list, transforms, dataset_catalog, is_train=True):
 
 def make_data_sampler(dataset, shuffle, distributed):
     if distributed:
-        return samplers.DistributedSampler(dataset, shuffle=shuffle, num_replicas=comm.get_world_size(),
+        if run_herring:
+            return samplers.DistributedSampler(dataset, shuffle=shuffle, num_replicas=herring.get_world_size(),
+                                           rank=herring.get_rank())
+        else:
+            return samplers.DistributedSampler(dataset, shuffle=shuffle, num_replicas=comm.get_world_size(),
                                            rank=comm.get_rank())
     if shuffle:
         sampler = torch.utils.data.sampler.RandomSampler(dataset)

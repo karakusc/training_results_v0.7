@@ -5,7 +5,13 @@ import math
 import torch
 import maskrcnn_benchmark.utils.comm as comm
 from torch.utils.data.sampler import Sampler
+import torch.distributed as dist
+from maskrcnn_benchmark.utils.herring_env import is_herring
 
+run_herring = False
+if is_herring():
+    import herring.torch as herring
+    run_herring = True
 
 class DistributedSampler(Sampler):
     """Sampler that restricts data loading to a subset of the dataset.
@@ -24,9 +30,19 @@ class DistributedSampler(Sampler):
 
     def __init__(self, dataset, num_replicas=None, rank=None, shuffle=True):
         if num_replicas is None:
-            num_replicas = comm.get_world_size()
+            if run_herring:
+                num_replicas = herring.get_world_size()
+            else:
+                if not dist.is_available():
+                    raise RuntimeError("Requires distributed package to be available")
+                num_replicas = dist.get_world_size()
         if rank is None:
-            rank = comm.get_rank()
+            if run_herring:
+                rank = herring.get_rank()
+            else:
+                if not dist.is_available():
+                    raise RuntimeError("Requires distributed package to be available")
+                rank = dist.get_rank()
         self.dataset = dataset
         self.num_replicas = num_replicas
         self.rank = rank

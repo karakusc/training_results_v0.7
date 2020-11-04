@@ -10,6 +10,8 @@ from maskrcnn_benchmark.utils.c2_model_loading import load_c2_format
 from maskrcnn_benchmark.utils.imports import import_file
 from maskrcnn_benchmark.utils.model_zoo import cache_url
 
+from collections import defaultdict
+from itertools import chain
 
 class Checkpointer(object):
     def __init__(
