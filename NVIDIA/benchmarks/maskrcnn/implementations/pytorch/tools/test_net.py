@@ -134,7 +134,7 @@ def main():
 
     logger.info("Collecting env info (might take some time)")
     logger.info("\n" + collect_env_info())
-    
+
     model_build_start = time.time()
     model = build_detection_model(cfg)
     model.to(cfg.MODEL.DEVICE)

@@ -41,11 +41,11 @@ class BalancedPositiveNegativeSampler(object):
             for matched_idxs_per_image in matched_idxs:
                 if objectness is not None:
                     objectness = objectness.view(-1)
-                    positive = torch.nonzero((matched_idxs_per_image >= 1)*(objectness > -1) ).squeeze(1)
-                    negative = torch.nonzero((matched_idxs_per_image == 0)*(objectness > -1)).squeeze(1)
+                    positive = torch.nonzero((matched_idxs_per_image >= 1)*(objectness > -1), as_tuple=False).squeeze(1)
+                    negative = torch.nonzero((matched_idxs_per_image == 0)*(objectness > -1), as_tuple=False).squeeze(1)
                 else:
-                    positive = torch.nonzero(matched_idxs_per_image >= 1).squeeze(1)
-                    negative = torch.nonzero(matched_idxs_per_image == 0).squeeze(1)
+                    positive = torch.nonzero(matched_idxs_per_image >= 1, as_tuple=False).squeeze(1)
+                    negative = torch.nonzero(matched_idxs_per_image == 0, as_tuple=False).squeeze(1)
     
                 num_pos = int(self.batch_size_per_image * self.positive_fraction)
                 # protect against not enough positive examples

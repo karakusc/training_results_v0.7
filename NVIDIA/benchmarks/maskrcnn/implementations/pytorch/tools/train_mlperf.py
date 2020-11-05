@@ -173,7 +173,6 @@ def mlperf_test_early_exit(iteration, iters_per_epoch, tester, model, data_loade
                 print("in else is main ",result_epoch)
                 logger = logging.getLogger('maskrcnn_benchmark.trainer')
                 logger.info('bbox mAP: {}, segm mAP: {}'.format(bbox_map, segm_map))
-
                 log_event(key=constants.EVAL_ACCURACY, value={"BBOX" : bbox_map, "SEGM" : segm_map}, metadata={"epoch_num" : result_epoch} )
                 log_end(key=constants.EVAL_STOP, metadata={"epoch_num": result_epoch})
                 # terminating condition
@@ -181,7 +180,6 @@ def mlperf_test_early_exit(iteration, iters_per_epoch, tester, model, data_loade
                     logger.info("Target mAP reached, exiting...")
                     finished = 1
                     #return True
-
         # We now know on rank 0 whether or not we should terminate
         # Bcast this flag on multi-GPU
         if get_world_size() > 1:
@@ -196,13 +194,11 @@ def mlperf_test_early_exit(iteration, iters_per_epoch, tester, model, data_loade
             # Single GPU, don't need to create tensor to bcast, just use value directly
             if finished == 1:
                 return True
-
     # Otherwise, default case, continue
     return False'''
     # Otherwise, default case, continue
     return False
-    
-    
+
 
 def mlperf_log_epoch_start(iteration, iters_per_epoch):
     # First iteration:

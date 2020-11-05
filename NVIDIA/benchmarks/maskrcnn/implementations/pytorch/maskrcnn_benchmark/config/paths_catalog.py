@@ -8,12 +8,17 @@ class DatasetCatalog(object):
     DATA_DIR = "datasets"
     DATASETS = {
         "coco_2017_train": {
-            "img_dir": "/shared/datasets/coco/train2017",
-            "ann_file": "/shared/datasets/coco/annotations/instances_train2017.json"
+            "img_dir": "/scratch/datasets/coco2/train2017", # "/shared/datasets/coco/train2017",
+            "ann_file": "/scratch/datasets/coco2/annotations/instances_train2017.json", # "/shared/datasets/coco/annotations/instances_train2017.json"
+#            "img_dir": "/shared/datasets/coco/train2017",
+#            "ann_file": "/shared/datasets/coco/annotations/instances_train2017.json"
+
         },
         "coco_2017_val": {
-            "img_dir": "/shared/datasets/coco/val2017",
-            "ann_file": "/shared/datasets/coco/annotations/instances_val2017.json"
+            "img_dir": "/scratch/datasets/coco2/val2017", # "/shared/datasets/coco/val2017",
+            "ann_file": "/scratch/datasets/coco2/annotations/instances_val2017.json", #"/shared/datasets/coco/annotations/instances_val2017.json"
+#            "img_dir": "/shared/datasets/coco/val2017",
+#            "ann_file": "/shared/datasets/coco/annotations/instances_val2017.json"
         },
         "coco_2014_train": {
             "img_dir": "coco/train2014",
