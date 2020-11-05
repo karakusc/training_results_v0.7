@@ -8,7 +8,7 @@ PORT=1234
 NUM_NODES=8
 CONFIG_FILE='configs/e2e_mask_rcnn_R_50_FPN_1x_giou_novo_ls.yaml' # e.g. /shared/roshanin/training_results_v0.7/NVIDIA/benchmarks/maskrcnn/implementations/pytorch/configs/e2e_mask_rcnn_R_50_FPN_1x.yaml
 PATHS_CATALOG='maskrcnn_benchmark/config/paths_catalog.py' # e.g. /shared/roshanin/training_results_v0.7/NVIDIA/benchmarks/maskrcnn/implementations/pytorch/maskrcnn_benchmark/config/paths_catalog_dbcluster.py
-OUTPUT_DIR='/shared/mzanur/mrcnn_bs_64x8_homo_nvme_1workers/' # e.g./shared/datasets/checkpoints_train_eval_test1
+OUTPUT_DIR='/shared/mzanur/mrcnn_bs_64x8_ckpt/' # e.g./shared/datasets/checkpoints_train_eval_test1
 EVAL_HOSTS='eval_hosts'
 RESULTS_DIR='/shared/mzanur/eval_test'
 

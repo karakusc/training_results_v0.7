@@ -94,7 +94,7 @@ def mlperf_checkpoint_early_exit(iteration, iters_per_epoch, checkpointer, cfg):
             log_start(key=constants.EVAL_START, metadata={"epoch_num":epoch})
             # check_if_done_file_present
             done_file = list(glob.glob(os.path.join(cfg.OUTPUT_DIR, 'done')))
-            if len(done_file)>0:
+            if len(done_file)>0 or epoch > 15:
                 finished = 1
             else:
                 checkpointer.save("epoch_{}".format(epoch), nhwc=cfg.NHWC)
@@ -143,7 +143,7 @@ def mlperf_test_early_exit(iteration, iters_per_epoch, tester, model, data_loade
                       metadata={"epoch_num" : epoch} )
             if bbox_map>=min_bbox_map and segm_map>=min_segm_map:
                 finished = 1
-            if epoch == 17:
+            if epoch == 15:
                 finished = 1
         synchronize()
         if get_world_size() > 1:
@@ -162,40 +162,40 @@ def mlperf_test_early_exit(iteration, iters_per_epoch, tester, model, data_loade
             if finished == 1:
                 return True
     
-    '''else:
-        # Otherwise, check for finished async results
-        results = check_completed_tags()
-        # on master process, check each result for terminating condition
-        # sentinel for run finishing
-        finished = 0
-        if is_main_process():
-            for result_epoch, (bbox_map, segm_map) in results.items():
-                print("in else is main ",result_epoch)
-                logger = logging.getLogger('maskrcnn_benchmark.trainer')
-                logger.info('bbox mAP: {}, segm mAP: {}'.format(bbox_map, segm_map))
-                log_event(key=constants.EVAL_ACCURACY, value={"BBOX" : bbox_map, "SEGM" : segm_map}, metadata={"epoch_num" : result_epoch} )
-                log_end(key=constants.EVAL_STOP, metadata={"epoch_num": result_epoch})
-                # terminating condition
-                if bbox_map >= min_bbox_map and segm_map >= min_segm_map:
-                    logger.info("Target mAP reached, exiting...")
-                    finished = 1
-                    #return True
-        # We now know on rank 0 whether or not we should terminate
-        # Bcast this flag on multi-GPU
-        if get_world_size() > 1:
-            with torch.no_grad():
-                finish_tensor = torch.tensor([finished], dtype=torch.int32, device = torch.device('cuda'))
-                broadcast(finish_tensor, 0)
-    
-                # If notified, end.
-                if finish_tensor.item() == 1:
-                    return True
-        else:
-            # Single GPU, don't need to create tensor to bcast, just use value directly
-            if finished == 1:
-                return True
-    # Otherwise, default case, continue
-    return False'''
+#       else:
+#        # Otherwise, check for finished async results
+#        results = check_completed_tags()
+#        # on master process, check each result for terminating condition
+#        # sentinel for run finishing
+#        finished = 0
+#        if is_main_process():
+#            for result_epoch, (bbox_map, segm_map) in results.items():
+#                print("in else is main ",result_epoch)
+#                logger = logging.getLogger('maskrcnn_benchmark.trainer')
+#                logger.info('bbox mAP: {}, segm mAP: {}'.format(bbox_map, segm_map))
+#                log_event(key=constants.EVAL_ACCURACY, value={"BBOX" : bbox_map, "SEGM" : segm_map}, metadata={"epoch_num" : result_epoch} )
+#                log_end(key=constants.EVAL_STOP, metadata={"epoch_num": result_epoch})
+#                # terminating condition
+#                if bbox_map >= min_bbox_map and segm_map >= min_segm_map:
+#                    logger.info("Target mAP reached, exiting...")
+#                    finished = 1
+#                    #return True
+#        # We now know on rank 0 whether or not we should terminate
+#        # Bcast this flag on multi-GPU
+#        if get_world_size() > 1:
+#            with torch.no_grad():
+#                finish_tensor = torch.tensor([finished], dtype=torch.int32, device = torch.device('cuda'))
+#                broadcast(finish_tensor, 0)
+#    
+#                # If notified, end.
+#                if finish_tensor.item() == 1:
+#                    return True
+#        else:
+#            # Single GPU, don't need to create tensor to bcast, just use value directly
+#            if finished == 1:
+#                return True
+#    # Otherwise, default case, continue
+#    return False
     # Otherwise, default case, continue
     return False
 
