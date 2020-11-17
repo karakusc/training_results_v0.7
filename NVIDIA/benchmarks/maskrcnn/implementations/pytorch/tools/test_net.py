@@ -7,7 +7,7 @@ from maskrcnn_benchmark.utils.env import setup_environment  # noqa F401 isort:sk
 import argparse
 import os
 import time
-
+import numpy as np
 import torch
 from maskrcnn_benchmark.config import cfg
 from maskrcnn_benchmark.data import make_data_loader
@@ -16,7 +16,7 @@ from maskrcnn_benchmark.engine.inference import inference
 from maskrcnn_benchmark.modeling.detector import build_detection_model
 from maskrcnn_benchmark.utils.checkpoint import DetectronCheckpointer
 from maskrcnn_benchmark.utils.collect_env import collect_env_info
-from maskrcnn_benchmark.utils.comm import synchronize, get_rank, is_main_process
+from maskrcnn_benchmark.utils.comm import synchronize, get_rank, is_main_process, broadcast
 from maskrcnn_benchmark.utils.logger import setup_logger
 from maskrcnn_benchmark.utils.miscellaneous import mkdir
 from maskrcnn_benchmark.utils.async_evaluator import init, get_evaluator, set_epoch_tag, get_tag
@@ -153,7 +153,7 @@ def main():
 #    output_dir = cfg.OUTPUT_DIR
 #    checkpointer = DetectronCheckpointer(cfg, model, save_dir=output_dir)
 #    _ = checkpointer.load(cfg.MODEL.WEIGHT)
-    done = False
+    done = 0
     while not done:
         if len(input_q) == 0 or input_q[0] == last:
             pass
@@ -164,13 +164,23 @@ def main():
             checkpointer = DetectronCheckpointer(cfg, model, save_dir=output_dir)
             _ = checkpointer.load(cfg.MODEL.WEIGHT)
             eval_result = do_eval(cfg, model, distributed)
-            done = ((eval_result['bbox'] >= .377) and (eval_result['segm'] >= .339))
-            print(done)
-            if is_main_process and done:
+            if is_main_process():
+                done = int((eval_result['bbox'] >= .377) and (eval_result['segm'] >= .339))
+                print(bool(done))
+            synchronize()
+            finish_tensor = torch.tensor([done], dtype=torch.int32, device = torch.device('cuda'))
+            torch.distributed.broadcast(finish_tensor, 0)
+            done = finish_tensor.item()
+            print(finish_tensor.item())
+            if is_main_process() and done:
                 done_file = os.path.join(cfg.OUTPUT_DIR, "done")
                 with open(done_file, 'w') as stop_trigger:
                     stop_trigger.write('done')
-        time.sleep(5)
+            if finish_tensor.item() == 1:
+                print("shutting down")
+        time.sleep(1)
+    print("exiting")
+    synchronize()
 
 if __name__ == "__main__":
     main()
