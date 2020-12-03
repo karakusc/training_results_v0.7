@@ -1,5 +1,5 @@
 #!/bin/bash
-source /shared/herring_mzanur/bin/activate
+source /shared/mzanur/conda_pt/bin/activate
 echo $LD_LIBRARY_PATH
 echo $PATH
 
@@ -22,7 +22,7 @@ LS=0.1
 
 #cd /shared/mzanur/training_results_v0.7/NVIDIA/benchmarks/maskrcnn/implementations/pytorch_cleanup
 
-/shared/herring_mzanur/bin/python -u -m bind_launch --nnodes 32 --node_rank $OMPI_COMM_WORLD_RANK --master_addr 192.168.69.5 --master_port 1234 --nsockets_per_node=${NSOCKETS_PER_NODE} \
+/shared/mzanur/conda_pt/bin/python -u -m bind_launch --nnodes 8 --node_rank $OMPI_COMM_WORLD_RANK --master_addr 192.168.69.5 --master_port 1234 --nsockets_per_node=${NSOCKETS_PER_NODE} \
  --ncores_per_socket=${NCORES_PER_SOCKET} --nproc_per_node=${NPROC_PER_NODE} \
  tools/train_mlperf.py --config-file 'configs/e2e_mask_rcnn_R_50_FPN_1x_giou_novo_ls.yaml' \
  DTYPE 'float16' \

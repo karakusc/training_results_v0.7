@@ -23,7 +23,7 @@ rm -rf  /shared/jbsnyder/output/*
 
 # cd /shared/mzanur/training_results_v0.7/NVIDIA/benchmarks/maskrcnn/implementations/pytorch
 BASEDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
-/shared/mzanur/conda_pt/bin/herringrun -n 8 -c /shared/mzanur/conda_pt \
+/shared/mzanur/conda_pt/bin/herringrun -n 64 -c /shared/mzanur/conda_pt \
  USE_HERRING_ALL_REDUCE=1 /shared/mzanur/conda_pt/bin/python tools/train_mlperf.py \
  --config-file 'configs/e2e_mask_rcnn_R_50_FPN_1x_giou_novo_ls.yaml' \
  DTYPE 'float16' \
