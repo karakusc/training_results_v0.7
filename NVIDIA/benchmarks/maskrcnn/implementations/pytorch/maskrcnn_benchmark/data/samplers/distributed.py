@@ -6,12 +6,12 @@ import torch
 import maskrcnn_benchmark.utils.comm as comm
 from torch.utils.data.sampler import Sampler
 import torch.distributed as dist
-from maskrcnn_benchmark.utils.herring_env import is_herring
+#from maskrcnn_benchmark.utils.herring_env import is_herring
 
 run_herring = False
-if is_herring():
-    import herring.torch as herring
-    run_herring = True
+#if is_herring():
+#    import herring.torch as herring
+#    run_herring = True
 
 class DistributedSampler(Sampler):
     """Sampler that restricts data loading to a subset of the dataset.

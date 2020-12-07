@@ -15,13 +15,13 @@ from . import samplers
 from .collate_batch import BatchCollator
 from .transforms import build_transforms
 
-from maskrcnn_benchmark.utils.herring_env import is_herring
+#from maskrcnn_benchmark.utils.herring_env import is_herring
 
 run_herring = False
 
-if is_herring():
-    import herring.torch as herring
-    run_herring = True
+#if is_herring():
+#    import herring.torch as herring
+#    run_herring = True
 
 def build_dataset(dataset_list, transforms, dataset_catalog, is_train=True):
     """
