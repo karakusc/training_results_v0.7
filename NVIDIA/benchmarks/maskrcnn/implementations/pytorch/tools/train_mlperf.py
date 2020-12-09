@@ -43,6 +43,8 @@ from fp16_optimizer import FP16_Optimizer
 
 from mlperf_logging.mllog import constants
 
+import smdistributed.modelparallel.torch as smp
+
 # check for herring setup
 use_herring = os.environ.get("USE_HERRING_ALL_REDUCE", 0)
 
@@ -237,11 +239,13 @@ def train(cfg, local_rank, distributed, random_number_generator=None):
     log_event(key=constants.GLOBAL_BATCH_SIZE, value=cfg.SOLVER.IMS_PER_BATCH)
     log_event(key=constants.NUM_IMAGE_CANDIDATES, value=cfg.MODEL.RPN.FPN_POST_NMS_TOP_N_TRAIN)
 
-    model = build_detection_model(cfg)
-    device = torch.device(cfg.MODEL.DEVICE)
-    model.to(device)
+    model = smp.DistributedModel(build_detection_model(cfg))
+    device = torch.device("cuda", smp.local_rank())
 
-    optimizer = make_optimizer(cfg, model)
+    #device = torch.device(cfg.MODEL.DEVICE)
+    #model.to(device)
+
+    optimizer = smp.DistributedOptimizer(make_optimizer(cfg, model))
     # Initialize mixed-precision training
     is_fp16 = (cfg.DTYPE == "float16")
     if is_fp16:
@@ -265,7 +269,8 @@ def train(cfg, local_rank, distributed, random_number_generator=None):
 
     if distributed:
         if not use_herring:
-            model = DDP(model, delay_allreduce=True)
+            #model = DDP(model, delay_allreduce=True)
+            pass
         else:
             model = DDP(model, device_ids=[get_local_rank()], broadcast_buffers=False, bucket_cap_mb=25)
 
@@ -285,7 +290,7 @@ def train(cfg, local_rank, distributed, random_number_generator=None):
     
     if is_fp16:
         import apex
-        optimizer = apex.fp16_utils.fp16_optimizer.FP16_Optimizer(optimizer, dynamic_loss_scale=True)
+        optimizer = apex.fp16_utils.fp16_optimizer.FP16_Optimizer(model, optimizer, dynamic_loss_scale=True)
 
     log_end(key=constants.INIT_STOP)
     barrier()
@@ -378,9 +383,17 @@ def main():
 
     args = parser.parse_args()
 
-    num_gpus = int(os.environ["WORLD_SIZE"]) if "WORLD_SIZE" in os.environ else get_world_size()
+    #num_gpus = int(os.environ["WORLD_SIZE"]) if "WORLD_SIZE" in os.environ else get_world_size()
+    num_gpus = 1
+    args.distributed = True
     args.distributed = num_gpus > 1
     # args.local_rank = get_local_rank()
+
+    smp.init({
+        "partitions": 2,
+        "ddp": True,
+    })
+    args.local_rank = smp.local_rank()
 
     # if is_main_process:
     #     # Setting logging file parameters for compliance logging
@@ -434,8 +447,8 @@ def main():
     worker_seeds = broadcast_seeds(worker_seeds, device='cuda')
 
     # Setting worker seeds
-    logger.info("Worker {}: Setting seed {}".format(args.local_rank, worker_seeds[args.local_rank]))
-    torch.manual_seed(worker_seeds[args.local_rank])
+    logger.info("Worker {}: Setting seed {}".format(smp.dp_rank(), worker_seeds[smp.dp_rank()]))
+    torch.manual_seed(worker_seeds[smp.dp_rank()])
 
 
     logger.info("Collecting env info (might take some time)")

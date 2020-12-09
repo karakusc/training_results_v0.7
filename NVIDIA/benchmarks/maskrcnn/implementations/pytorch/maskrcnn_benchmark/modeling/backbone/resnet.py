@@ -241,7 +241,9 @@ def _make_stage(
     return nn.Sequential(*blocks)
 
 
-class Bottleneck(torch.jit.ScriptModule):
+# TODO(cakarak) support jit
+#class Bottleneck(torch.jit.ScriptModule):
+class Bottleneck(nn.Module):
     __constants__ = ['downsample']
     def __init__(
         self,
@@ -309,7 +311,8 @@ class Bottleneck(torch.jit.ScriptModule):
         for l in [self.conv1, self.conv2, self.conv3,]:
             kaiming_uniform_(l.weight, a=1, nhwc=nhwc)
 
-    @torch.jit.script_method
+    # TODO(cakarak) support jit
+    #@torch.jit.script_method
     def forward(self, x):
         identity = x
 

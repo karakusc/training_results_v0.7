@@ -14,9 +14,7 @@ LR_SCHEDULE="COSINE"
 BETA1=0.9
 BETA2=0.4
 
-python -u -m bind_launch --nnodes 1 --node_rank 0 --master_addr 127.0.0.1 --master_port 1234 --nsockets_per_node=${NSOCKETS_PER_NODE} \
- --ncores_per_socket=${NCORES_PER_SOCKET} --nproc_per_node=${NPROC_PER_NODE} \
- tools/train_mlperf.py --config-file 'configs/e2e_mask_rcnn_R_50_FPN_1x.yaml' \
+mpirun --allow-run-as-root -np 2 python tools/train_mlperf.py --config-file 'configs/e2e_mask_rcnn_R_50_FPN_1x.yaml' \
  DTYPE 'float16' \
  PATHS_CATALOG 'maskrcnn_benchmark/config/paths_catalog.py' \
  DISABLE_REDUCED_LOGGING True \

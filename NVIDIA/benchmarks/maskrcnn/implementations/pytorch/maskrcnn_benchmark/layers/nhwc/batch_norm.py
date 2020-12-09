@@ -16,7 +16,9 @@ import torch
 from torch import nn
 from maskrcnn_benchmark.layers import FrozenBatchNorm2d
 
-class FrozenBatchNorm2d_NHWC(torch.jit.ScriptModule):
+# TODO(cakarak) support jit
+#class FrozenBatchNorm2d_NHWC(torch.jit.ScriptModule):
+class FrozenBatchNorm2d_NHWC(nn.Module):
     """
     BatchNorm2d where the batch statistics and the affine parameters
     are fixed
@@ -29,7 +31,9 @@ class FrozenBatchNorm2d_NHWC(torch.jit.ScriptModule):
         self.register_buffer("running_mean", torch.zeros(n))
         self.register_buffer("running_var", torch.ones(n))
 
-    @torch.jit.script_method
+    
+    # TODO(cakarak) support jit
+    #@torch.jit.script_method
     def forward(self, x):
         scale = self.weight * self.running_var.rsqrt()
         bias = self.bias - self.running_mean * scale

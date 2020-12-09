@@ -8,6 +8,7 @@ import torch
 
 import maskrcnn_benchmark.utils.comm as comm
 from maskrcnn_benchmark.utils.metric_logger import MetricLogger
+import smdistributed.modelparallel.torch as smp
 
 from apex import amp
 
@@ -41,6 +42,13 @@ def reduce_loss_dict(loss_dict):
 def set_grads_to_none(model):
     for param in model.parameters():
         param.grad = None
+
+@smp.step
+def forward_backward(model, optimizer, images, targets):
+    loss_dict = model(images, targets)
+    losses = sum(loss for loss in loss_dict.values())
+    optimizer.backward(losses)
+    return loss_dict
 
 
 def do_train(
@@ -92,6 +100,7 @@ def do_train(
             next_images, next_targets = _prefetch()
             yield current_images, current_targets
     
+    torch.cuda.set_device(torch.device("cuda", smp.local_rank()))
     comm.synchronize()
     optimizer.zero_grad()
     for iteration, (images, targets) in enumerate(prefetcher(iter(data_loader)), start_iter):
@@ -102,13 +111,10 @@ def do_train(
         iteration = iteration + 1
         arguments["iteration"] = iteration
 
-
         images = images.to(device)
         targets = [target.to(device) for target in targets]
 
-        loss_dict = model(images, targets)
-
-        losses = sum(loss for loss in loss_dict.values())
+        loss_dict = forward_backward(model, optimizer, images, targets)
 
         # reduce losses over all GPUs for logging purposes
         if not disable_allreduce_for_logging:
@@ -122,7 +128,7 @@ def do_train(
         # Note: If mixed precision is not used, this ends up doing nothing
         # Otherwise apply loss scaling for mixed-precision recipe
         # with optimizer.scale_loss(losses) as scaled_losses:
-        optimizer.backward(losses)
+        #optimizer.backward(losses)
         optimizer.step()
         # set_grads_to_none(model)
         optimizer.zero_grad()

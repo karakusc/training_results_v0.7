@@ -9,6 +9,7 @@ import torch
 import os
 import torch.distributed as dist
 #from maskrcnn_benchmark.utils.herring_env import is_herring
+import smdistributed.modelparallel.torch as smp
 
 run_herring = False
 #if is_herring():
@@ -16,54 +17,64 @@ run_herring = False
 #    run_herring = True
 
 def get_world_size():
-    if run_herring:
-        return herring.get_world_size()
-    else:
-        if not dist.is_available():
-            return 1
-        if not dist.is_initialized():
-            return 1
-        return dist.get_world_size()
+    """ Note: Post-SMP-integration, this is actually the dp size """
+    return smp.dp_size()
+
+    #if run_herring:
+    #    return herring.get_world_size()
+    #else:
+    #    if not dist.is_available():
+    #        return 1
+    #    if not dist.is_initialized():
+    #        return 1
+    #    return dist.get_world_size()
 
 
 def reduce(tensor, dst_rank=0):
-    dist.reduce(tensor, dst_rank)
+    dist.reduce(tensor, dst_rank, group=smp.get_dp_process_group())
 
 
 def broadcast(tensor, src_rank=0):
-    dist.broadcast(tensor, src_rank)
+    dist.broadcast(tensor, src_rank, group=smp.get_dp_process_group())
 
 
 def get_local_rank():
-    if not run_herring:
-        local_rank = os.getenv('LOCAL_RANK', 0)
-        return local_rank
-    return dist.get_local_rank()
+    return smp.local_rank()
+
+    #if not run_herring:
+    #    local_rank = os.getenv('LOCAL_RANK', 0)
+    #    return local_rank
+    #return dist.get_local_rank()
 
 
 def get_rank():
-    if run_herring:
-        return herring.get_rank()
-    else:
-        if not dist.is_available():
-            return 0
-        if not dist.is_initialized():
-            return 0
-        return dist.get_rank()
+    """ Note: Post-SMP-integration, this is actually the dp rank """
+
+    return smp.dp_rank()
+    #if run_herring:
+    #    return herring.get_rank()
+    #else:
+    #    if not dist.is_available():
+    #        return 0
+    #    if not dist.is_initialized():
+    #        return 0
+    #    return dist.get_rank()
 
 
 def is_main_process():
-    if run_herring:
-        herring.barrier()
-    else:
-        if not dist.is_available():
-            return
-        if not dist.is_initialized():
-            return
-        world_size = dist.get_world_size()
-        if world_size == 1:
-            return
-        dist.barrier()
+    smp.barrier()
+
+    #if run_herring:
+    #    herring.barrier()
+    #else:
+    #    if not dist.is_available():
+    #        return
+    #    if not dist.is_initialized():
+    #        return
+    #    world_size = dist.get_world_size()
+    #    if world_size == 1:
+    #        return
+    #    dist.barrier()
 
 
 
@@ -73,15 +84,17 @@ def synchronize():
     Helper function to synchronize (barrier) among all processes when
     using distributed training
     """
-    if not run_herring:
-        if not dist.is_available():
-            return
-        if not dist.is_initialized():
-            return
-        world_size = dist.get_world_size()
-        if world_size == 1:
-            return
-    dist.barrier()
+    smp.barrier()
+
+    #if not run_herring:
+    #    if not dist.is_available():
+    #        return
+    #    if not dist.is_initialized():
+    #        return
+    #    world_size = dist.get_world_size()
+    #    if world_size == 1:
+    #        return
+    #dist.barrier()
 
 
 def all_gather(data):
@@ -120,7 +133,7 @@ def all_gather(data):
         if local_size != max_size:
             padding = torch.ByteTensor(size=(max_size - local_size,)).to("cuda")
             tensor = torch.cat((tensor, padding), dim=0)
-        dist.all_gather(tensor_list, tensor)
+        dist.all_gather(tensor_list, tensor, group=smp.get_dp_process_group())
 
         data_list = []
         for size, tensor in zip(size_list, tensor_list):
@@ -153,7 +166,7 @@ def reduce_dict(input_dict, average=True):
                 names.append(k)
                 values.append(input_dict[k])
             values = torch.stack(values, dim=0)
-            dist.reduce(values, dst=0)
+            dist.reduce(values, dst=0, group=smp.get_dp_process_group())
             if dist.get_rank() == 0 and average:
                 # only main process gets accumulated, so only divide by
                 # world_size in this case
