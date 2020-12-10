@@ -81,9 +81,14 @@ class FPN(nn.Module):
 
 
 class LastLevelMaxPool(nn.Module):
+    def __init__(self):
+        super(LastLevelMaxPool, self).__init__()
+        self.max_pool_nhwc = MaxPool2d_NHWC(1,2,0)
+        self.max_pool = nn.MaxPool2d(1,2,0)
+
     def forward(self, x, nhwc):
-        op = MaxPool2d_NHWC(1,2,0) if nhwc else nn.MaxPool2d(1,2,0)
-        return [op(x)]
+        op = self.max_pool_nhwc if nhwc else self.max_pool 
+        return [op(x)] 
 
 
 class LastLevelP6P7(nn.Module):

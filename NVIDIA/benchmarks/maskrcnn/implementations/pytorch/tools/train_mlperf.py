@@ -246,6 +246,7 @@ def train(cfg, local_rank, distributed, random_number_generator=None):
     #model.to(device)
 
     optimizer = smp.DistributedOptimizer(make_optimizer(cfg, model))
+
     # Initialize mixed-precision training
     is_fp16 = (cfg.DTYPE == "float16")
     if is_fp16:

@@ -115,6 +115,9 @@ def do_train(
         targets = [target.to(device) for target in targets]
 
         loss_dict = forward_backward(model, optimizer, images, targets)
+        loss_dict = {k: v.reduce_mean() for k, v in loss_dict.items()}        
+
+        losses = sum(loss for loss in loss_dict.values())
 
         # reduce losses over all GPUs for logging purposes
         if not disable_allreduce_for_logging:

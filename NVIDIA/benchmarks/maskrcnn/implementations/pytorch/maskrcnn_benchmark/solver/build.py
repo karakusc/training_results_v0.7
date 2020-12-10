@@ -8,6 +8,7 @@ from .cosine_lr_scheduler import CosineAnnealingWarmUpRestarts
 
 from .fused_sgd import FusedSGD
 from smdistributed.modelparallel.torch.optimizers import FusedNovoGrad
+#from .fused_novograd import FusedNovoGrad
 
 def make_optimizer(cfg, model):
     params = []
