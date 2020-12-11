@@ -297,6 +297,7 @@ def train(cfg, local_rank, distributed, random_number_generator=None):
                              'min_scale': 1,
                              'delayed_shift': 2}
 
+        #optimizer = smp.DistributedOptimizer(optimizer)
         optimizer = smp.DistributedOptimizer(FP16_Optimizer(model, optimizer, dynamic_loss_scale=True, dynamic_loss_args=dynamic_loss_args ))
 
         def init_params(mod, opt):
@@ -397,18 +398,18 @@ def main():
 
     #num_gpus = int(os.environ["WORLD_SIZE"]) if "WORLD_SIZE" in os.environ else get_world_size()
     num_gpus = 1
-    args.distributed = True
     args.distributed = num_gpus > 1
     # args.local_rank = get_local_rank()
 
     smp.init({
         "partitions": 2,
-        "microbatches": 1,
+        "microbatches": 2,
         "memory_weight": 1.0,
         "ddp": True,
     })
     args.local_rank = smp.local_rank()
 
+    torch.cuda.set_device(args.local_rank)
     # if is_main_process:
     #     # Setting logging file parameters for compliance logging
     #     os.environ["COMPLIANCE_FILE"] = '/MASKRCNN_complVv0.5.0_' + str(datetime.datetime.now())

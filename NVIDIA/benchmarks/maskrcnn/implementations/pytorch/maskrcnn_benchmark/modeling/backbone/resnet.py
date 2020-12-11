@@ -31,6 +31,8 @@ from maskrcnn_benchmark.layers import Conv2d
 from maskrcnn_benchmark.modeling.make_layers import group_norm
 from maskrcnn_benchmark.utils.registry import Registry
 
+import smdistributed.modelparallel.torch as smp
+
 # ResNet stage specification
 StageSpec = namedtuple(
     "StageSpec",
@@ -107,22 +109,23 @@ class ResNet(nn.Module):
 
         # Get the tensor layout (NHWC vs NCHW)
         self.nhwc = cfg.NHWC
-        for stage_spec in stage_specs:
+        for i, stage_spec in enumerate(stage_specs):
             name = "layer" + str(stage_spec.index)
             stage2_relative_factor = 2 ** (stage_spec.index - 1)
             bottleneck_channels = stage2_bottleneck_channels * stage2_relative_factor
             out_channels = stage2_out_channels * stage2_relative_factor
-            module = _make_stage(
-                transformation_module,
-                in_channels,
-                bottleneck_channels,
-                out_channels,
-                stage_spec.block_count,
-                num_groups,
-                cfg.MODEL.RESNETS.STRIDE_IN_1X1,
-                first_stride=int(stage_spec.index > 1) + 1,
-                nhwc=self.nhwc
-            )
+            with smp.partition(int(i < 1)):
+                module = _make_stage(
+                    transformation_module,
+                    in_channels,
+                    bottleneck_channels,
+                    out_channels,
+                    stage_spec.block_count,
+                    num_groups,
+                    cfg.MODEL.RESNETS.STRIDE_IN_1X1,
+                    first_stride=int(stage_spec.index > 1) + 1,
+                    nhwc=self.nhwc
+                )
             in_channels = out_channels
             self.add_module(name, module)
             self.stages.append(name)

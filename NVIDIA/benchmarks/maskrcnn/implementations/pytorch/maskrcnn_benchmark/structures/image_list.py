@@ -32,6 +32,17 @@ class ImageList(object):
         pinned_tensor = self.tensors.pin_memory()
         return ImageList(pinned_tensor, self.image_sizes)
 
+    def mp_slice(self, num_microbatches, mb, axis):
+        dim_size = list(self.tensors.size())[axis]
+        if dim_size % num_microbatches != 0:
+            raise ValueError("Batch size must be divisible by the number of microbatches!")
+
+        split_size = dim_size // num_microbatches
+        sliced_tensor = self.tensors.narrow(axis, mb * split_size, split_size)
+        sliced_sizes = self.image_sizes[mb * split_size : (mb + 1) * split_size]
+        return ImageList(sliced_tensor, sliced_sizes)
+        
+        
 
 def to_image_list(tensors, size_divisible=0):
     """

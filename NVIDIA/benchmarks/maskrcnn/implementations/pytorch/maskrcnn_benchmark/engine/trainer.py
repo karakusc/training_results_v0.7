@@ -12,6 +12,14 @@ import smdistributed.modelparallel.torch as smp
 
 from apex import amp
 
+class Targets:
+    def __init__(self, targ):
+        self.targets = targ
+    def mp_slice(self, num_mb, mb, axis):
+        slice_size = len(self.targets) // num_mb
+        return self.targets[mb*slice_size : (mb+1)*slice_size]
+
+
 def reduce_loss_dict(loss_dict):
     """
     Reduce the loss dictionary from all processes so that process with rank
@@ -114,7 +122,7 @@ def do_train(
         images = images.to(device)
         targets = [target.to(device) for target in targets]
 
-        loss_dict = forward_backward(model, optimizer, images, targets)
+        loss_dict = forward_backward(model, optimizer, images, Targets(targets))
         loss_dict = {k: v.reduce_mean() for k, v in loss_dict.items()}        
 
         losses = sum(loss for loss in loss_dict.values())
