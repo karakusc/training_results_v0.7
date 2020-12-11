@@ -39,6 +39,9 @@ class conv2d_NHWC_impl(torch.autograd.Function):
 
     @staticmethod
     def forward(ctx, x, w, bias=None, stride=(1,1), padding=(0,0), dilation=(1,1), groups=1):
+        import smdistributed.modelparallel.torch as smp
+        torch.cuda.set_device(torch.device("cuda", smp.local_rank()))
+
         # Save constants for bprop
         ctx.stride = stride
         ctx.padding = padding

@@ -39,7 +39,7 @@ from maskrcnn_benchmark.utils.mlperf_logger import (log_end, log_start, log_even
 from maskrcnn_benchmark.utils.async_evaluator import init, get_evaluator, set_epoch_tag
 from maskrcnn_benchmark.data.datasets.evaluation.coco.coco_eval_np import infer_coco_eval
 
-from fp16_optimizer import FP16_Optimizer
+#from fp16_optimizer import FP16_Optimizer
 
 from mlperf_logging.mllog import constants
 
@@ -245,7 +245,7 @@ def train(cfg, local_rank, distributed, random_number_generator=None):
     #device = torch.device(cfg.MODEL.DEVICE)
     #model.to(device)
 
-    optimizer = smp.DistributedOptimizer(make_optimizer(cfg, model))
+    optimizer = make_optimizer(cfg, model)
 
     # Initialize mixed-precision training
     is_fp16 = (cfg.DTYPE == "float16")
@@ -290,8 +290,19 @@ def train(cfg, local_rank, distributed, random_number_generator=None):
     arguments.update(extra_checkpoint_data)
     
     if is_fp16:
-        import apex
-        optimizer = apex.fp16_utils.fp16_optimizer.FP16_Optimizer(model, optimizer, dynamic_loss_scale=True)
+        #import apex
+        from fp16.fp16 import FP16_Optimizer
+        #optimizer = apex.fp16_utils.fp16_optimizer.FP16_Optimizer(model, optimizer, dynamic_loss_scale=True)
+        dynamic_loss_args = {'scale_window': 1000,
+                             'min_scale': 1,
+                             'delayed_shift': 2}
+
+        optimizer = smp.DistributedOptimizer(FP16_Optimizer(model, optimizer, dynamic_loss_scale=True, dynamic_loss_args=dynamic_loss_args ))
+
+        def init_params(mod, opt):
+            opt.init_master_params()
+
+        model.register_post_partition_hook(init_params)
 
     log_end(key=constants.INIT_STOP)
     barrier()
@@ -392,6 +403,8 @@ def main():
 
     smp.init({
         "partitions": 2,
+        "microbatches": 1,
+        "memory_weight": 1.0,
         "ddp": True,
     })
     args.local_rank = smp.local_rank()

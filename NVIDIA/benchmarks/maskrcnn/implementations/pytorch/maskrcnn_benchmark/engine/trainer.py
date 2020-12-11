@@ -132,6 +132,7 @@ def do_train(
         # Otherwise apply loss scaling for mixed-precision recipe
         # with optimizer.scale_loss(losses) as scaled_losses:
         #optimizer.backward(losses)
+        optimizer.update_master_grads()
         optimizer.step()
         # set_grads_to_none(model)
         optimizer.zero_grad()
