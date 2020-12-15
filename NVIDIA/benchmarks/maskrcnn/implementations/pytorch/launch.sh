@@ -14,7 +14,7 @@ LR_SCHEDULE="COSINE"
 BETA1=0.9
 BETA2=0.4
 
-mpirun --allow-run-as-root -np 2 python tools/train_mlperf.py --config-file 'configs/e2e_mask_rcnn_R_50_FPN_1x.yaml' \
+mpirun --allow-run-as-root -np 8 python tools/train_mlperf.py --config-file 'configs/e2e_mask_rcnn_R_50_FPN_1x.yaml' \
  DTYPE 'float16' \
  PATHS_CATALOG 'maskrcnn_benchmark/config/paths_catalog.py' \
  DISABLE_REDUCED_LOGGING True \

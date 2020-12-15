@@ -15,26 +15,31 @@
 import torch
 from apex import amp
 from maskrcnn_benchmark import NHWC
+import smdistributed.modelparallel.torch as smp
 
 class NHWCToNCHW_Impl(torch.autograd.Function):
     @staticmethod
     def forward(ctx, x):
+        torch.cuda.set_device(smp.local_rank())
         y = NHWC.cudnnNhwcToNchw(x)
         return y
  
     @staticmethod
     def backward(ctx, y_grad):
+        torch.cuda.set_device(smp.local_rank())
         x_grad = NHWC.cudnnNchwToNhwc(y_grad)
         return x_grad
 
 class NCHWToNHWC_Impl(torch.autograd.Function):
     @staticmethod
     def forward(ctx, x):
+        torch.cuda.set_device(smp.local_rank())
         y = NHWC.cudnnNchwToNhwc(x)
         return y
  
     @staticmethod
     def backward(ctx, y_grad):
+        torch.cuda.set_device(smp.local_rank())
         x_grad = NHWC.cudnnNhwcToNchw(y_grad)
         return x_grad
 
