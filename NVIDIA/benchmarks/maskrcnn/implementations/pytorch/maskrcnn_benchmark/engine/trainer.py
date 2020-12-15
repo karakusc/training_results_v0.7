@@ -15,7 +15,7 @@ from apex import amp
 class Targets:
     def __init__(self, targ):
         self.targets = targ
-    def mp_slice(self, num_mb, mb, axis):
+    def smp_slice(self, num_mb, mb, axis):
         slice_size = len(self.targets) // num_mb
         return self.targets[mb*slice_size : (mb+1)*slice_size]
 
