@@ -399,15 +399,15 @@ class RPNPostProcessor(torch.nn.Module):
         return boxlists
 
 def make_rpn_postprocessor(config, rpn_box_coder, is_train):
-    fpn_post_nms_top_n = config.MODEL.RPN.FPN_POST_NMS_TOP_N_TRAIN//smp.num_microbatches()
+    fpn_post_nms_top_n = config.MODEL.RPN.FPN_POST_NMS_TOP_N_TRAIN #//smp.num_microbatches()
     if not is_train:
-        fpn_post_nms_top_n = config.MODEL.RPN.FPN_POST_NMS_TOP_N_TEST//smp.num_microbatches()
+        fpn_post_nms_top_n = config.MODEL.RPN.FPN_POST_NMS_TOP_N_TEST #//smp.num_microbatches()
 
-    pre_nms_top_n = config.MODEL.RPN.PRE_NMS_TOP_N_TRAIN//smp.num_microbatches()
-    post_nms_top_n = config.MODEL.RPN.POST_NMS_TOP_N_TRAIN//smp.num_microbatches()
+    pre_nms_top_n = config.MODEL.RPN.PRE_NMS_TOP_N_TRAIN #//smp.num_microbatches()
+    post_nms_top_n = config.MODEL.RPN.POST_NMS_TOP_N_TRAIN #//smp.num_microbatches()
     if not is_train:
-        pre_nms_top_n = config.MODEL.RPN.PRE_NMS_TOP_N_TEST//smp.num_microbatches()
-        post_nms_top_n = config.MODEL.RPN.POST_NMS_TOP_N_TEST//smp.num_microbatches()
+        pre_nms_top_n = config.MODEL.RPN.PRE_NMS_TOP_N_TEST #//smp.num_microbatches()
+        post_nms_top_n = config.MODEL.RPN.POST_NMS_TOP_N_TEST #//smp.num_microbatches()
     nms_thresh = config.MODEL.RPN.NMS_THRESH
     min_size = config.MODEL.RPN.MIN_SIZE
     box_selector = RPNPostProcessor(
