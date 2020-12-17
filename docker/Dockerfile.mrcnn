@@ -1,0 +1,25 @@
+ARG FROM_IMAGE_NAME=578276202366.dkr.ecr.us-east-1.amazonaws.com/smdistributed-modelparallel-pytorch-1.6:latest
+FROM ${FROM_IMAGE_NAME}
+
+RUN spt-get update
+
+RUN apt-get install -y numactl
+
+RUN pip install -v --no-cache-dir torchvision==0.7.0
+
+RUN git clone https://github.com/johnbensnyder/cocoapi && cd cocoapi/PythonAPI && pip install -v --no-cache-dir -e .
+
+RUN pip install --no-cache-dir https://github.com/mlperf/logging/archive/9ea0afa.zip
+
+RUN pip install opencv-python==3.4.11.45
+
+RUN pip install yacs
+
+RUN git clone https://github.com/NVIDIA/apex && cd apex && pip install -v --no-cache-dir --global-option="--cpp_ext" --global-option="--cuda_ext" ./ 
+
+RUN git clone -b smp-mrcnn https://github.com/karakusc/training_results_v0.7/ && cd training_results_v0.7/NVIDIA/benchmarks/maskrcnn/implementations/pytorch && rm -rf build && pip install -v --no-cache-dir -e . 
+
+RUN pip install tqdm
+
+WORKDIR /
+
