@@ -340,7 +340,9 @@ class FP16_Optimizer(object):
             for group in self.optimizer.param_groups:
                 grads = [p.grad for p in group['params'] if p.grad is not None]
                 _overflow_buf = torch.cuda.IntTensor([0], device=torch.device("cuda", smp.local_rank()))
-                multi_tensor_applier(amp_C.multi_tensor_scale,
+
+                if len(grads) > 0:
+                    multi_tensor_applier(amp_C.multi_tensor_scale,
                                          _overflow_buf,
                                          [grads, grads],
                                          1./self.loss_scale)
@@ -608,9 +610,8 @@ class FP16_Optimizer(object):
             if self.overflow:
                 return
 
-        if smp.mp_rank() == 0:
-            self._model_grads_to_master_grads()
-            self._downscale_master()
+        self._model_grads_to_master_grads()
+        self._downscale_master()
 
     def inspect_master_grad_data(self):
         """

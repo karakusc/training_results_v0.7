@@ -178,11 +178,11 @@ def model_grads_to_master_grads(model_params, master_params, flat_master=False):
         master_grads = [p.grad for p in master_params if p.grad is not None]
         _overflow_buf = torch.cuda.IntTensor([0], device=torch.device("cuda", smp.local_rank()))
 
-        if smp.mp_rank() == 0:
+        if len(model_grads) > 0:
             multi_tensor_applier(amp_C.multi_tensor_scale,
-                                 _overflow_buf,
-                                 [model_grads, master_grads],
-                                 1.0)
+                             _overflow_buf,
+                             [model_grads, master_grads],
+                             1.0)
 
 
 def master_params_to_model_params(model_params, master_params, flat_master=False):
