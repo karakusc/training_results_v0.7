@@ -1,4 +1,4 @@
-ARG FROM_IMAGE_NAME=578276202366.dkr.ecr.us-west-2.amazonaws.com/rubik:pytorch_test
+ARG FROM_IMAGE_NAME=578276202366.dkr.ecr.us-west-2.amazonaws.com/rubik:pytorch_test1-1-0
 FROM ${FROM_IMAGE_NAME}
 
 RUN apt-get update
