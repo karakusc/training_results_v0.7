@@ -29,3 +29,4 @@ RUN pip install tqdm
 
 RUN wget https://dl.fbaipublicfiles.com/detectron/ImageNetPretrained/MSRA/R-50.pkl -P /root/.torch/models/ 
 
+RUN rm -rf /rubik
