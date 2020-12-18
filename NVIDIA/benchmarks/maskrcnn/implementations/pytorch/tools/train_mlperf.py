@@ -401,14 +401,9 @@ def main():
     args.distributed = num_gpus > 1
     # args.local_rank = get_local_rank()
 
-    smp.init({
-        "partitions": 2,
-        "microbatches": 2,
-        "memory_weight": 1.0,
-        "ddp": True,
-    })
-    args.local_rank = smp.local_rank()
+    smp.init()
 
+    args.local_rank = smp.local_rank()
     torch.cuda.set_device(args.local_rank)
     # if is_main_process:
     #     # Setting logging file parameters for compliance logging

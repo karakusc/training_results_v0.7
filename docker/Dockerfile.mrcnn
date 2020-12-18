@@ -1,7 +1,7 @@
-ARG FROM_IMAGE_NAME=578276202366.dkr.ecr.us-east-1.amazonaws.com/smdistributed-modelparallel-pytorch-1.6:latest
+ARG FROM_IMAGE_NAME=578276202366.dkr.ecr.us-west-2.amazonaws.com/rubik:pytorch_test
 FROM ${FROM_IMAGE_NAME}
 
-RUN spt-get update
+RUN apt-get update
 
 RUN apt-get install -y numactl
 
@@ -15,11 +15,17 @@ RUN pip install opencv-python==3.4.11.45
 
 RUN pip install yacs
 
+RUN mkdir apex_build
+
+WORKDIR apex_build
+
 RUN git clone https://github.com/NVIDIA/apex && cd apex && pip install -v --no-cache-dir --global-option="--cpp_ext" --global-option="--cuda_ext" ./ 
+
+WORKDIR / 
 
 RUN git clone -b smp-mrcnn https://github.com/karakusc/training_results_v0.7/ && cd training_results_v0.7/NVIDIA/benchmarks/maskrcnn/implementations/pytorch && rm -rf build && pip install -v --no-cache-dir -e . 
 
 RUN pip install tqdm
 
-WORKDIR /
+RUN wget https://dl.fbaipublicfiles.com/detectron/ImageNetPretrained/MSRA/R-50.pkl -P /root/.torch/models/ 
 
