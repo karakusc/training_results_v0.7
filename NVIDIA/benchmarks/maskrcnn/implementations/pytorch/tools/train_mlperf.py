@@ -279,15 +279,6 @@ def train(cfg, local_rank, distributed, random_number_generator=None):
     arguments["iteration"] = 0
     arguments["nhwc"] = cfg.NHWC
     output_dir = cfg.OUTPUT_DIR
-
-    save_to_disk = get_rank() == 0
-    checkpointer = DetectronCheckpointer(
-        cfg, model, optimizer, scheduler, output_dir, save_to_disk
-    )
-    arguments["save_checkpoints"] = cfg.SAVE_CHECKPOINTS
-    
-    extra_checkpoint_data = checkpointer.load(cfg.MODEL.WEIGHT, cfg.NHWC)
-    arguments.update(extra_checkpoint_data)
     
     if is_fp16:
         #import apex
@@ -304,6 +295,14 @@ def train(cfg, local_rank, distributed, random_number_generator=None):
             opt.init_master_params()
 
         model.register_post_partition_hook(init_params)
+
+    save_to_disk = get_rank() == 0
+    checkpointer = DetectronCheckpointer(
+        cfg, model, optimizer, scheduler, output_dir, save_to_disk
+    )
+    arguments["save_checkpoints"] = cfg.SAVE_CHECKPOINTS
+    extra_checkpoint_data = checkpointer.load(cfg.MODEL.WEIGHT, cfg.NHWC, load_partial=True)
+    arguments.update(extra_checkpoint_data)
 
     log_end(key=constants.INIT_STOP)
     barrier()

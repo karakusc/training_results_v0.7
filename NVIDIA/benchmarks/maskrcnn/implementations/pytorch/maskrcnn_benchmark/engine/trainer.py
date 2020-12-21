@@ -173,10 +173,11 @@ def do_train(
             )
 
         # TODO add saving/checkpointing
-        #if iteration % checkpoint_period == 0 and arguments["save_checkpoints"]:
-        #    checkpointer.save("model_{:07d}".format(iteration), **arguments)
-        #if iteration == max_iter and arguments["save_checkpoints"]:
-        #    checkpointer.save("model_final", **arguments)
+        if iteration % checkpoint_period == 0 and arguments["save_checkpoints"]:
+            checkpointer.save("model_{:07d}".format(iteration), save_partial=True, **arguments)
+
+        if iteration == max_iter and arguments["save_checkpoints"]:
+            checkpointer.save("model_final", save_partial=False, **arguments)
 
         # per-epoch work (testing)
         if per_iter_end_callback_fn is not None:

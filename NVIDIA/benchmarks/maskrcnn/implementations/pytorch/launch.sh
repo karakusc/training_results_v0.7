@@ -12,6 +12,7 @@ BETA1=0.9
 BETA2=0.4
 
 mpirun --allow-run-as-root -np 8 python tools/train_mlperf.py --config-file 'configs/e2e_mask_rcnn_R_50_FPN_1x.yaml' \
+ SAVE_CHECKPOINTS True \
  DTYPE 'float16' \
  PER_EPOCH_EVAL False \
  PATHS_CATALOG 'maskrcnn_benchmark/config/paths_catalog.py' \
