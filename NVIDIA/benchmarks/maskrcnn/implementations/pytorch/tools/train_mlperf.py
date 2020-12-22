@@ -282,7 +282,7 @@ def train(cfg, local_rank, distributed, random_number_generator=None):
     
     if is_fp16:
         #import apex
-        from fp16.fp16 import FP16_Optimizer
+        from maskrcnn_benchmark.fp16.fp16 import FP16_Optimizer
         #optimizer = apex.fp16_utils.fp16_optimizer.FP16_Optimizer(model, optimizer, dynamic_loss_scale=True)
         dynamic_loss_args = {'scale_window': 1000,
                              'min_scale': 1,
@@ -290,19 +290,27 @@ def train(cfg, local_rank, distributed, random_number_generator=None):
 
         #optimizer = smp.DistributedOptimizer(optimizer)
         optimizer = smp.DistributedOptimizer(FP16_Optimizer(model, optimizer, dynamic_loss_scale=True, dynamic_loss_args=dynamic_loss_args ))
+        save_to_disk = get_rank() == 0
+        checkpointer = DetectronCheckpointer(
+            cfg, model, optimizer, scheduler, output_dir, save_to_disk
+        )
+        arguments["save_checkpoints"] = cfg.SAVE_CHECKPOINTS
+        extra_checkpoint_data = checkpointer.load(cfg.MODEL.WEIGHT, cfg.NHWC, load_partial=True)
+        arguments.update(extra_checkpoint_data)
 
         def init_params(mod, opt):
             opt.init_master_params()
 
         model.register_post_partition_hook(init_params)
+    else:
+        save_to_disk = get_rank() == 0
+        checkpointer = DetectronCheckpointer(
+            cfg, model, optimizer, scheduler, output_dir, save_to_disk
+        )
+        arguments["save_checkpoints"] = cfg.SAVE_CHECKPOINTS
+        extra_checkpoint_data = checkpointer.load(cfg.MODEL.WEIGHT, cfg.NHWC, load_partial=True)
+        arguments.update(extra_checkpoint_data)
 
-    save_to_disk = get_rank() == 0
-    checkpointer = DetectronCheckpointer(
-        cfg, model, optimizer, scheduler, output_dir, save_to_disk
-    )
-    arguments["save_checkpoints"] = cfg.SAVE_CHECKPOINTS
-    extra_checkpoint_data = checkpointer.load(cfg.MODEL.WEIGHT, cfg.NHWC, load_partial=True)
-    arguments.update(extra_checkpoint_data)
 
     log_end(key=constants.INIT_STOP)
     barrier()

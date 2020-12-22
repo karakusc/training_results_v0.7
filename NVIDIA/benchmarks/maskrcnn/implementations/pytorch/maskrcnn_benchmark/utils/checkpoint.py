@@ -10,6 +10,7 @@ from maskrcnn_benchmark.utils.model_serialization import load_state_dict, is_lay
 from maskrcnn_benchmark.utils.c2_model_loading import load_c2_format
 from maskrcnn_benchmark.utils.imports import import_file
 from maskrcnn_benchmark.utils.model_zoo import cache_url
+from maskrcnn_benchmark.fp16.fp16 import FP16_Optimizer
 
 from collections import defaultdict
 from itertools import chain
@@ -104,11 +105,9 @@ class Checkpointer(object):
             #            transpose_optimizer_state_nchw_to_nhwc(self.model, self.optimizer.local_state_dict())
             #        else:
             #            transpose_optimizer_state_nchw_to_nhwc(self.model, self.optimizer.state_dict())
-        else:
-            smp.barrier()
+        smp.barrier()
 
-    def _load_fp16_optimizer(self, state_dict):
-        opt_state_dict = state_dict["optimizer"]
+    def _load_fp16_optimizer(self, opt_state_dict):
         def param_name_to_index(self):
             param_id_to_index = self._param_id_to_index()
             name_to_index = {}
@@ -156,7 +155,7 @@ class Checkpointer(object):
         self._load_model(checkpoint, nhwc)
         if "optimizer" in checkpoint and self.optimizer:
             self.logger.info("Loading optimizer from {}".format(f))
-            if isinstance(optimizer, FP16_Optimizer):
+            if isinstance(self.optimizer, FP16_Optimizer):
                 self._load_fp16_optimizer(checkpoint.pop("optimizer"))
             else:
                 self.optimizer.load_state_dict(checkpoint.pop("optimizer"))
@@ -191,7 +190,8 @@ class Checkpointer(object):
             f.write(last_filename)
 
     def _load_file(self, f, load_partial):
-        return smp.load(f, partial=load_partial)
+        fname = f + "_" + str(smp.mp_rank())
+        return smp.load(fname, partial=load_partial)
 
     def _load_model(self, checkpoint, nhwc):
         load_state_dict(self.model, checkpoint.pop("model"), nhwc)
