@@ -13,8 +13,8 @@ class DatasetCatalog(object):
             "ann_file": f"{data_dir}/annotations/instances_train2017.json"
         },
         "coco_2017_val": {
-            "img_dir": "/home/ubuntu/coco/val2017",
-            "ann_file": "/home/ubuntu/coco/annotations/instances_val2017.json"
+            "img_dir": f"{data_dir}/val2017",
+            "ann_file": f"{data_dir}/annotations/instances_val2017.json"
         },
         "coco_2014_train": {
             "img_dir": "coco/train2014",
