@@ -147,8 +147,9 @@ def do_train(
         scheduler.step()
 
         batch_time = time.time() - end
+        throughput = arguments["global_batch_size"] / batch_time
         end = time.time()
-        meters.update(time=batch_time, data=data_time)
+        meters.update(time=batch_time, data=data_time, throughput=throughput)
 
         eta_seconds = meters.time.global_avg * (max_iter - iteration)
         eta_string = str(datetime.timedelta(seconds=int(eta_seconds)))
