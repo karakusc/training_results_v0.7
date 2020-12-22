@@ -216,6 +216,7 @@ class FP16_Optimizer(object):
 
         if self.use_smp:
             torch.cuda.set_device(smp.local_rank())
+        self.fp32paramid_from_fp16paramid = {}
 
         for i, param_group in enumerate(self.optimizer.param_groups):
             self.maybe_print("FP16_Optimizer processing param group {}:".format(i))
@@ -239,6 +240,7 @@ class FP16_Optimizer(object):
                         # We still need to recast per-param state tensors, if any, to FP32.
                         if param in self.optimizer.state:
                             self.optimizer.state[master_param] = self.optimizer.state.pop(param)
+                        self.fp32paramid_from_fp16paramid[id(param)] = id(master_param)
                     elif param.type() in ['torch.cuda.FloatTensor', 'torch.FloatTensor']:
                         self.maybe_print("FP16_Optimizer received torch.cuda.FloatTensor with {}"
                                          .format(param.size()))

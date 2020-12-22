@@ -91,27 +91,26 @@ class Checkpointer(object):
                 data["scheduler"] = self.scheduler.state_dict()
             data.update(kwargs)
             # transpose to NCHW before saving as checkpoint if NHWC is used
-            #if nhwc:
-            #    transpose_checkpoint_model_state_nhwc_to_nchw(data["model"])
-            #    transpose_optimizer_state_nhwc_to_nchw(self.model, data["optimizer"]["optimizer_state_dict"])
+            if nhwc:
+                transpose_checkpoint_model_state_nhwc_to_nchw(data["model"])
+                transpose_optimizer_state_nhwc_to_nchw(self.model, self.optimizer, data["optimizer"]["optimizer_state_dict"])
             save_file = os.path.join(self.save_dir, "{}.pth".format(name))
             self.logger.info("Saving checkpoint to {}".format(save_file))
             smp.save(data, save_file, save_partial)
             self.tag_last_checkpoint(save_file)
             # Convert back to NHWC if NHWC layout is used, needed for optimizer buffers
-            #if nhwc:
-            #    if self.optimizer is not None:
-            #        if save_partial: 
-            #            transpose_optimizer_state_nchw_to_nhwc(self.model, self.optimizer.local_state_dict())
-            #        else:
-            #            transpose_optimizer_state_nchw_to_nhwc(self.model, self.optimizer.state_dict())
-        smp.barrier()
+            if nhwc:
+                if self.optimizer is not None:
+                    if save_partial: 
+                        transpose_optimizer_state_nchw_to_nhwc(self.model, self.optimizer, self.optimizer.local_state_dict())
+                    else:
+                        transpose_optimizer_state_nchw_to_nhwc(self.model, self.optimizer, self.optimizer.state_dict())
 
     def _load_fp16_optimizer(self, opt_state_dict):
         def param_name_to_index(self):
             param_id_to_index = self._param_id_to_index()
             name_to_index = {}
-            for name, param in model.named_parameters():
+            for name, param in self.model.named_parameters():
                 fp16_param_id = id(param)
                 if fp16_param_id in self.fp32paramid_from_fp16paramid:
                     param_id = self.fp32paramid_from_fp16paramid[fp16_param_id]
@@ -141,7 +140,7 @@ class Checkpointer(object):
         self.model.register_post_partition_hook(hook_fn)
 
 
-    def load(self, f=None, nhwc=False, load_partial=False):
+    def load(self, f=None, nhwc=False, load_partial=False, model_only=False):
         if self.has_checkpoint():
             # override argument with existing checkpoint
             f = self.get_checkpoint_file()
@@ -153,14 +152,17 @@ class Checkpointer(object):
         self.logger.info("Loading checkpoint from {}".format(f))
         checkpoint = self._load_file(f, load_partial)
         self._load_model(checkpoint, nhwc)
+        if model_only:
+            return checkpoint
+
         if "optimizer" in checkpoint and self.optimizer:
             self.logger.info("Loading optimizer from {}".format(f))
             if isinstance(self.optimizer, FP16_Optimizer):
                 self._load_fp16_optimizer(checkpoint.pop("optimizer"))
             else:
                 self.optimizer.load_state_dict(checkpoint.pop("optimizer"))
-            #if nhwc:
-            #    transpose_optimizer_state_nchw_to_nhwc(self.model, self.optimizer.state_dict())
+            if nhwc:
+                transpose_optimizer_state_nchw_to_nhwc(self.model, self.optimizer, self.optimizer.state_dict())
         if "scheduler" in checkpoint and self.scheduler:
             self.logger.info("Loading scheduler from {}".format(f))
             self.scheduler.load_state_dict(checkpoint.pop("scheduler"))
@@ -245,7 +247,7 @@ def transpose_checkpoint_model_state_nhwc_to_nchw(model_dict):
         if needs_transpose:
             model_dict[k] = model_dict[k].permute(0,3,1,2).contiguous()
 
-def transpose_optimizer_state_nhwc_to_nchw(model, optimizer_dict):
+def transpose_optimizer_state_nhwc_to_nchw(model, optimizer, optimizer_dict):
     param_id_to_index = optimizer._param_id_to_index()
     layer_id_to_name_map = {}
 
@@ -267,8 +269,18 @@ def transpose_optimizer_state_nhwc_to_nchw(model, optimizer_dict):
             optimizer_dict['state'][k]['exp_avg'] =  \
                         optimizer_dict['state'][k]['exp_avg'].permute(0,3,1,2).contiguous()
 
-def transpose_optimizer_state_nchw_to_nhwc(model, optimizer_dict):
+def transpose_optimizer_state_nchw_to_nhwc(model, optimizer, optimizer_dict):
+    param_id_to_index = optimizer._param_id_to_index()
     layer_id_to_name_map = {}
+
+    for name, param in model.named_parameters():
+        if param.requires_grad:
+            if id(param) in optimizer.id_trans:
+                idx = param_id_to_index[optimizer.id_trans[id(param)]]
+            else:
+                idx = param_id_to_index[id(param)]
+            layer_id_to_name_map[idx] = name
+
     for name, param in model.named_parameters():
         layer_id_to_name_map[id(param)] = name
     for k in optimizer_dict['state']:

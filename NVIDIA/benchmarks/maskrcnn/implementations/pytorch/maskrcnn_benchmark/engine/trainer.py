@@ -174,7 +174,8 @@ def do_train(
 
         # TODO add saving/checkpointing
         if iteration % checkpoint_period == 0 and arguments["save_checkpoints"]:
-            checkpointer.save("model_{:07d}".format(iteration), save_partial=True, **arguments)
+            arguments["save_partial"] = True 
+            checkpointer.save("model_{:07d}".format(iteration), **arguments)
 
         if iteration == max_iter and arguments["save_checkpoints"]:
             checkpointer.save("model_final", save_partial=False, **arguments)
