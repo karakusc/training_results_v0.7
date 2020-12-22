@@ -19,4 +19,4 @@ RUN cp /maskrcnn/implementations/pytorch/*.py /training_results_v0.7/NVIDIA/benc
     cp -r /maskrcnn/implementations/pytorch/tests /training_results_v0.7/NVIDIA/benchmarks/maskrcnn/implementations/pytorch/tests && \
     cp -r /maskrcnn/implementations/pytorch/tools /training_results_v0.7/NVIDIA/benchmarks/maskrcnn/implementations/pytorch/tools
 
-RUN cp /maskrcnn/implementations/pytorch/launch_sm.py /opt/ml/code/
+RUN mkdir -p /opt/ml/code/ && cp /maskrcnn/implementations/pytorch/launch_sm.py /opt/ml/code/
