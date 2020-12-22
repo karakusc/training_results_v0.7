@@ -18,18 +18,18 @@ def train():
              PATHS_CATALOG 'maskrcnn_benchmark/config/paths_catalog_sagemaker.py' \
              DISABLE_REDUCED_LOGGING True \
              SOLVER.BASE_LR {hyperparamters['BASE_LR']} \
-             SOLVER.WEIGHT_DECAY ${hyperparamters['WEIGHT_DECAY']} \
-             SOLVER.MAX_ITER ${hyperparamters['MAX_ITER']} \
-             SOLVER.WARMUP_FACTOR ${hyperparamters['WARMUP_FACTOR']} \
-             SOLVER.WARMUP_ITERS ${hyperparamters['WARMUP_ITERS']} \
+             SOLVER.WEIGHT_DECAY {hyperparamters['WEIGHT_DECAY']} \
+             SOLVER.MAX_ITER {hyperparamters['MAX_ITER']} \
+             SOLVER.WARMUP_FACTOR {hyperparamters['WARMUP_FACTOR']} \
+             SOLVER.WARMUP_ITERS {hyperparamters['WARMUP_ITERS']} \
              SOLVER.WEIGHT_DECAY_BIAS 0 \
              SOLVER.WARMUP_METHOD mlperf_linear \
-             SOLVER.IMS_PER_BATCH ${hyperparamters['TRAIN_IMS_PER_BATCH']} \
-             SOLVER.OPTIMIZER ${hyperparamters['OPTIMIZER']} \
-             SOLVER.BETA1 ${hyperparamters['BETA1']} \
-             SOLVER.BETA2 ${hyperparamters['BETA2']} \
-             SOLVER.LR_SCHEDULE ${hyperparamters['LR_SCHEDULE']} \
-             TEST.IMS_PER_BATCH ${hyperparamters['TEST_IMS_PER_BATCH']} \
+             SOLVER.IMS_PER_BATCH {hyperparamters['TRAIN_IMS_PER_BATCH']} \
+             SOLVER.OPTIMIZER {hyperparamters['OPTIMIZER']} \
+             SOLVER.BETA1 {hyperparamters['BETA1']} \
+             SOLVER.BETA2 {hyperparamters['BETA2']} \
+             SOLVER.LR_SCHEDULE {hyperparamters['LR_SCHEDULE']} \
+             TEST.IMS_PER_BATCH {hyperparamters['TEST_IMS_PER_BATCH']} \
              NHWC True
             """
 
@@ -43,7 +43,7 @@ def train():
         process = subprocess.Popen(
             run_cmd,
             encoding="utf-8",
-            cwd="/maskrcnn/implementations/pytorch/",
+            cwd="/training_results_v0.7/NVIDIA/benchmarks/maskrcnn/implementations/pytorch/",
             shell=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
