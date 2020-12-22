@@ -160,6 +160,7 @@ def do_train(
                     [
                         "eta: {eta}",
                         "iter: {iter}",
+                        "throughput: {throughput} img/sec",
                         "{meters}",
                         "lr: {lr:.6f}",
                         "max mem: {memory:.0f}",
@@ -168,6 +169,7 @@ def do_train(
                     eta=eta_string,
                     iter=iteration,
                     meters=str(meters),
+                    throughput=meters.throughput.global_avg,
                     lr=optimizer.param_groups[0]["lr"],
                     memory=torch.cuda.max_memory_allocated() / 1024.0 / 1024.0,
                 )
