@@ -2,21 +2,21 @@ FROM 578276202366.dkr.ecr.us-east-1.amazonaws.com/rubik-pt-mask-rcnn:base
 
 COPY training_results_v0.7/NVIDIA/benchmarks/maskrcnn/ /maskrcnn/
 
-RUN cp /maskrcnn/implementations/pytorch/*.py /training_results_v0.7/NVIDIA/benchmarks/maskrcnn/implementations/pytorch/ &&
-    cp -r /maskrcnn/implementations/pytorch/configs /training_results_v0.7/NVIDIA/benchmarks/maskrcnn/implementations/pytorch/configs &&
-    cp -r /maskrcnn/implementations/pytorch/demo /training_results_v0.7/NVIDIA/benchmarks/maskrcnn/implementations/pytorch/demo &&
-    cp -r /maskrcnn/implementations/pytorch/docker /training_results_v0.7/NVIDIA/benchmarks/maskrcnn/implementations/pytorch/docker &&
-    cp -r /maskrcnn/implementations/pytorch/fp16 /training_results_v0.7/NVIDIA/benchmarks/maskrcnn/implementations/pytorch/fp16 &&
-    cp /maskrcnn/implementations/pytorch/maskrcnn_benchmark/*.py /training_results_v0.7/NVIDIA/benchmarks/maskrcnn/implementations/pytorch/maskrcnn_benchmark/ &&
-    cp -r /maskrcnn/implementations/pytorch/maskrcnn_benchmark/config /training_results_v0.7/NVIDIA/benchmarks/maskrcnn/implementations/pytorch/maskrcnn_benchmark/config &&
-    cp -r /maskrcnn/implementations/pytorch/maskrcnn_benchmark/data /training_results_v0.7/NVIDIA/benchmarks/maskrcnn/implementations/pytorch/maskrcnn_benchmark/data &&
-    cp -r /maskrcnn/implementations/pytorch/maskrcnn_benchmark/engine /training_results_v0.7/NVIDIA/benchmarks/maskrcnn/implementations/pytorch/maskrcnn_benchmark/engine &&
-    cp -r /maskrcnn/implementations/pytorch/maskrcnn_benchmark/layers /training_results_v0.7/NVIDIA/benchmarks/maskrcnn/implementations/pytorch/maskrcnn_benchmark/layers &&
-    cp -r /maskrcnn/implementations/pytorch/maskrcnn_benchmark/modeling /training_results_v0.7/NVIDIA/benchmarks/maskrcnn/implementations/pytorch/maskrcnn_benchmark/modeling &&
-    cp -r /maskrcnn/implementations/pytorch/maskrcnn_benchmark/solver /training_results_v0.7/NVIDIA/benchmarks/maskrcnn/implementations/pytorch/maskrcnn_benchmark/solver &&
-    cp -r /maskrcnn/implementations/pytorch/maskrcnn_benchmark/structures /training_results_v0.7/NVIDIA/benchmarks/maskrcnn/implementations/pytorch/maskrcnn_benchmark/structures &&
-    cp -r /maskrcnn/implementations/pytorch/maskrcnn_benchmark/utils /training_results_v0.7/NVIDIA/benchmarks/maskrcnn/implementations/pytorch/maskrcnn_benchmark/utils &&
-    cp -r /maskrcnn/implementations/pytorch/tests /training_results_v0.7/NVIDIA/benchmarks/maskrcnn/implementations/pytorch/tests &&
+RUN cp /maskrcnn/implementations/pytorch/*.py /training_results_v0.7/NVIDIA/benchmarks/maskrcnn/implementations/pytorch/ && \
+    cp -r /maskrcnn/implementations/pytorch/configs /training_results_v0.7/NVIDIA/benchmarks/maskrcnn/implementations/pytorch/configs && \
+    cp -r /maskrcnn/implementations/pytorch/demo /training_results_v0.7/NVIDIA/benchmarks/maskrcnn/implementations/pytorch/demo && \
+    cp -r /maskrcnn/implementations/pytorch/docker /training_results_v0.7/NVIDIA/benchmarks/maskrcnn/implementations/pytorch/docker && \
+    cp -r /maskrcnn/implementations/pytorch/fp16 /training_results_v0.7/NVIDIA/benchmarks/maskrcnn/implementations/pytorch/fp16 && \
+    cp /maskrcnn/implementations/pytorch/maskrcnn_benchmark/*.py /training_results_v0.7/NVIDIA/benchmarks/maskrcnn/implementations/pytorch/maskrcnn_benchmark/ && \
+    cp -r /maskrcnn/implementations/pytorch/maskrcnn_benchmark/config /training_results_v0.7/NVIDIA/benchmarks/maskrcnn/implementations/pytorch/maskrcnn_benchmark/config && \
+    cp -r /maskrcnn/implementations/pytorch/maskrcnn_benchmark/data /training_results_v0.7/NVIDIA/benchmarks/maskrcnn/implementations/pytorch/maskrcnn_benchmark/data && \
+    cp -r /maskrcnn/implementations/pytorch/maskrcnn_benchmark/engine /training_results_v0.7/NVIDIA/benchmarks/maskrcnn/implementations/pytorch/maskrcnn_benchmark/engine && \
+    cp -r /maskrcnn/implementations/pytorch/maskrcnn_benchmark/layers /training_results_v0.7/NVIDIA/benchmarks/maskrcnn/implementations/pytorch/maskrcnn_benchmark/layers && \
+    cp -r /maskrcnn/implementations/pytorch/maskrcnn_benchmark/modeling /training_results_v0.7/NVIDIA/benchmarks/maskrcnn/implementations/pytorch/maskrcnn_benchmark/modeling && \
+    cp -r /maskrcnn/implementations/pytorch/maskrcnn_benchmark/solver /training_results_v0.7/NVIDIA/benchmarks/maskrcnn/implementations/pytorch/maskrcnn_benchmark/solver && \
+    cp -r /maskrcnn/implementations/pytorch/maskrcnn_benchmark/structures /training_results_v0.7/NVIDIA/benchmarks/maskrcnn/implementations/pytorch/maskrcnn_benchmark/structures && \
+    cp -r /maskrcnn/implementations/pytorch/maskrcnn_benchmark/utils /training_results_v0.7/NVIDIA/benchmarks/maskrcnn/implementations/pytorch/maskrcnn_benchmark/utils && \
+    cp -r /maskrcnn/implementations/pytorch/tests /training_results_v0.7/NVIDIA/benchmarks/maskrcnn/implementations/pytorch/tests && \
     cp -r /maskrcnn/implementations/pytorch/tools /training_results_v0.7/NVIDIA/benchmarks/maskrcnn/implementations/pytorch/tools
 
 RUN cp /maskrcnn/implementations/pytorch/launch_sm.py /opt/ml/code/
