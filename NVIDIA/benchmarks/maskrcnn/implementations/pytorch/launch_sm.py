@@ -43,7 +43,7 @@ def train():
         process = subprocess.Popen(
             run_cmd,
             encoding="utf-8",
-            cwd="/maskrcnn/implementation/pytorch/",
+            cwd="/maskrcnn/implementations/pytorch/",
             shell=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
