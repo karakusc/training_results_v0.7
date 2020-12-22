@@ -246,16 +246,26 @@ def transpose_checkpoint_model_state_nhwc_to_nchw(model_dict):
             model_dict[k] = model_dict[k].permute(0,3,1,2).contiguous()
 
 def transpose_optimizer_state_nhwc_to_nchw(model, optimizer_dict):
+    param_id_to_index = optimizer._param_id_to_index()
     layer_id_to_name_map = {}
+
+    for name, param in model.named_parameters():
+        if param.requires_grad:
+            if id(param) in optimizer.id_trans:
+                idx = param_id_to_index[optimizer.id_trans[id(param)]]
+            else:
+                idx = param_id_to_index[id(param)]
+            layer_id_to_name_map[idx] = name
+
     for name, param in model.named_parameters():
         layer_id_to_name_map[id(param)] = name
     for k in optimizer_dict['state']:
         needs_transpose = is_layer_nhwc_eligible(layer_id_to_name_map[k])
         needs_transpose = needs_transpose and  \
-                          len(optimizer_dict['state'][k]['momentum_buffer'].shape) == 4
+                          len(optimizer_dict['state'][k]['exp_avg'].shape) == 4
         if needs_transpose:    
-            optimizer_dict['state'][k]['momentum_buffer'] =  \
-                        optimizer_dict['state'][k]['momentum_buffer'].permute(0,3,1,2).contiguous()
+            optimizer_dict['state'][k]['exp_avg'] =  \
+                        optimizer_dict['state'][k]['exp_avg'].permute(0,3,1,2).contiguous()
 
 def transpose_optimizer_state_nchw_to_nhwc(model, optimizer_dict):
     layer_id_to_name_map = {}
@@ -264,7 +274,7 @@ def transpose_optimizer_state_nchw_to_nhwc(model, optimizer_dict):
     for k in optimizer_dict['state']:
         needs_transpose = is_layer_nhwc_eligible(layer_id_to_name_map[k])
         needs_transpose = needs_transpose and  \
-                          len(optimizer_dict['state'][k]['momentum_buffer'].shape) == 4
+                          len(optimizer_dict['state'][k]['exp_avg'].shape) == 4
         if needs_transpose:    
-            optimizer_dict['state'][k]['momentum_buffer'] =  \
-                        optimizer_dict['state'][k]['momentum_buffer'].permute(0,2,3,1).contiguous()
+            optimizer_dict['state'][k]['exp_avg'] =  \
+                        optimizer_dict['state'][k]['exp_avg'].permute(0,2,3,1).contiguous()
