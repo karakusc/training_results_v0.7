@@ -14,7 +14,7 @@ def train():
     run_cmd = f"""python tools/train_mlperf.py --config-file 'configs/e2e_mask_rcnn_R_50_FPN_1x.yaml' \
              DTYPE 'float16' \
              PER_EPOCH_EVAL False \
-             PATHS_CATALOG 'maskrcnn_benchmark/config/paths_catalog.py' \
+             PATHS_CATALOG 'maskrcnn_benchmark/config/paths_catalog_sagemaker.py' \
              DISABLE_REDUCED_LOGGING True \
              SOLVER.BASE_LR {hyperparamters['BASE_LR']} \
              SOLVER.WEIGHT_DECAY ${hyperparamters['WEIGHT_DECAY']} \
