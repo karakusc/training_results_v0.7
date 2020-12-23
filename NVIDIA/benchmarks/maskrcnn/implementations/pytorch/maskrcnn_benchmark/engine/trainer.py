@@ -129,8 +129,9 @@ def do_train(
         scheduler.step()
 
         batch_time = time.time() - end
+        throughput = arguments["global_batch_size"] / batch_time
         end = time.time()
-        meters.update(time=batch_time, data=data_time)
+        meters.update(time=batch_time, data=data_time, throughput=throughput)
 
         eta_seconds = meters.time.global_avg * (max_iter - iteration)
         eta_string = str(datetime.timedelta(seconds=int(eta_seconds)))
@@ -142,12 +143,14 @@ def do_train(
                         "eta: {eta}",
                         "iter: {iter}",
                         "{meters}",
+                        "throughput: {throughput} img/sec",
                         "lr: {lr:.6f}",
                         "max mem: {memory:.0f}",
                     ]
                 ).format(
                     eta=eta_string,
                     iter=iteration,
+                    throughput=meters.throughput.global_avg,
                     meters=str(meters),
                     lr=optimizer.param_groups[0]["lr"],
                     memory=torch.cuda.max_memory_allocated() / 1024.0 / 1024.0,
