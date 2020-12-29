@@ -278,6 +278,7 @@ def train(cfg, local_rank, distributed, random_number_generator=None):
     arguments = {}
     arguments["iteration"] = 0
     arguments["nhwc"] = cfg.NHWC
+    arguments["global_batch_size"] = cfg.SOLVER.IMS_PER_BATCH
     output_dir = cfg.OUTPUT_DIR
 
     save_to_disk = get_rank() == 0

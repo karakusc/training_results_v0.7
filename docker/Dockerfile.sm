@@ -1,0 +1,9 @@
+FROM 578276202366.dkr.ecr.us-east-1.amazonaws.com/rubik-pt-mask-rcnn:base
+
+COPY training_results_v0.7/NVIDIA/benchmarks/maskrcnn/ /maskrcnn/
+
+RUN apt-get install -y rsync
+
+RUN rsync -av /maskrcnn/implementations/pytorch /training_results_v0.7/NVIDIA/benchmarks/maskrcnn/implementations/
+
+RUN mkdir -p /opt/ml/code/ && cp /maskrcnn/implementations/pytorch/launch_sm.py /opt/ml/code/
