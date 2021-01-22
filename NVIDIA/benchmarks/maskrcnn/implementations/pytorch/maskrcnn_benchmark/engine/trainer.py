@@ -61,6 +61,7 @@ def forward_backward(model, optimizer, images, targets):
 
 def do_train(
     model,
+    iters_per_epoch,
     data_loader,
     optimizer,
     scheduler,
@@ -155,11 +156,12 @@ def do_train(
         eta_string = str(datetime.timedelta(seconds=int(eta_seconds)))
 
         if iteration % 20 == 0 or iteration == max_iter:
+            next_eval = (iteration // iters_per_epoch + 1) * iters_per_epoch - iteration
             logger.info(
                 meters.delimiter.join(
                     [
                         "eta: {eta}",
-                        "iter: {iter}",
+                        "iter/next_eval: {iter}/{next_eval}",
                         "throughput: {throughput} img/sec",
                         "{meters}",
                         "lr: {lr:.6f}",
@@ -168,6 +170,7 @@ def do_train(
                 ).format(
                     eta=eta_string,
                     iter=iteration,
+                    next_eval=next_eval,
                     meters=str(meters),
                     throughput=meters.throughput.global_avg,
                     lr=optimizer.param_groups[0]["lr"],

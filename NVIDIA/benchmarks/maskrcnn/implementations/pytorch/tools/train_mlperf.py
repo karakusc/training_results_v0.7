@@ -148,14 +148,18 @@ def mlperf_test_early_exit(iteration, iters_per_epoch, tester, model, data_loade
             if epoch == 17:
                 finished = 1
         synchronize()
-        if get_world_size() > 1:
+        if smp.size() > 1:
             with torch.no_grad():
                 finish_tensor = torch.tensor([finished], dtype=torch.int32, device = torch.device('cuda'))
                 if use_herring:
                     herring.broadcast(finish_tensor, 0)
                 else:
-                    torch.distributed.broadcast(finish_tensor, 0)
-    
+                    #torch.distributed.broadcast(finish_tensor, 0)
+                    if is_main_process():
+                        smp.broadcast(finish_tensor, smp.WORLD)
+                    else:
+                        finish_tensor = smp.recv_from(0, smp.RankType.WORLD_RANK)
+
                 # If notified, end.
                 if finish_tensor.item() == 1:
                     return True
@@ -326,6 +330,7 @@ def train(cfg, local_rank, distributed, random_number_generator=None):
         random_number_generator=random_number_generator,
     )[0]
     log_event(key=constants.TRAIN_SAMPLES, value=len(data_loader))
+    log_event(key=constants.EVAL_SAMPLES, value=len(eval_data_loader))
 
     checkpoint_period = cfg.SOLVER.CHECKPOINT_PERIOD
 
@@ -333,17 +338,17 @@ def train(cfg, local_rank, distributed, random_number_generator=None):
     # early exit each epoch
     if cfg.PER_EPOCH_EVAL:
         per_iter_callback_fn = functools.partial(
-                mlperf_checkpoint_early_exit,
+                mlperf_test_early_exit,
                 iters_per_epoch=iters_per_epoch,
                 # tester=functools.partial(test, cfg=cfg),
-                #tester=infer_coco_eval,
-                #model=model,
+                tester=infer_coco_eval,
+                model=model,
                 # distributed=distributed,
-                #data_loader=eval_data_loader,
-                checkpointer=checkpointer,
+                data_loader=eval_data_loader,
+                # checkpointer=checkpointer,
                 cfg=cfg,
-                #min_bbox_map=cfg.MLPERF.MIN_BBOX_MAP,
-                #min_segm_map=cfg.MLPERF.MIN_SEGM_MAP)
+                min_bbox_map=cfg.MLPERF.MIN_BBOX_MAP,
+                min_segm_map=cfg.MLPERF.MIN_SEGM_MAP,
         )
     else:
         per_iter_callback_fn = None
@@ -352,6 +357,7 @@ def train(cfg, local_rank, distributed, random_number_generator=None):
 
     success = do_train(
         model,
+        iters_per_epoch,
         data_loader,
         optimizer,
         scheduler,
@@ -398,11 +404,13 @@ def main():
     args = parser.parse_args()
 
     #num_gpus = int(os.environ["WORLD_SIZE"]) if "WORLD_SIZE" in os.environ else get_world_size()
-    num_gpus = 1
-    args.distributed = num_gpus > 1
+    #args.distributed = num_gpus > 1
     # args.local_rank = get_local_rank()
 
     smp.init()
+
+    num_gpus = smp.size()
+    args.distributed = smp.dp_size() > 1
 
     args.local_rank = smp.local_rank()
     torch.cuda.set_device(args.local_rank)
@@ -414,19 +422,29 @@ def main():
     #     constants._FILE_HANDLER.setLevel(logging.DEBUG)
     #     constants.LOGGER.addHandler(constants._FILE_HANDLER)
     if args.distributed:
-        torch.cuda.set_device(args.local_rank)
-        if not use_herring:
-            torch.distributed.init_process_group(
-                backend="nccl", init_method="env://"
-            )
+        # torch.cuda.set_device(args.local_rank)
+        # if not use_herring:
+        #     torch.distributed.init_process_group(
+        #         backend="nccl", init_method="env://"
+        #     )
         # setting seeds - needs to be timed, so after RUN_START
-        if is_main_process():
+        # if is_main_process():
+        #     master_seed = random.SystemRandom().randint(0, 2 ** 32 - 1)
+        #     seed_tensor = torch.tensor(master_seed, dtype=torch.float32, device=torch.device("cuda"))
+        # else:
+        #     seed_tensor = torch.tensor(0, dtype=torch.float32, device=torch.device("cuda"))
+        
+        if smp.dp_rank() == 0:
             master_seed = random.SystemRandom().randint(0, 2 ** 32 - 1)
             seed_tensor = torch.tensor(master_seed, dtype=torch.float32, device=torch.device("cuda"))
         else:
             seed_tensor = torch.tensor(0, dtype=torch.float32, device=torch.device("cuda"))
 
-        broadcast(seed_tensor, 0)
+        #broadcast(seed_tensor, 0)
+        if smp.dp_rank() == 0:
+            smp.broadcast(seed_tensor, smp.DP_GROUP)
+        else:
+            seed_tensor = smp.recv_from(0, smp.RankType.DP_RANK)
         master_seed = int(seed_tensor.item())
     else:
         # random master seed, random.SystemRandom() uses /dev/urandom on Unix
