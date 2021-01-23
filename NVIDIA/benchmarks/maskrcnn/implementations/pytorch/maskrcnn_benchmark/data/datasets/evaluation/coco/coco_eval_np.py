@@ -9,6 +9,8 @@ from maskrcnn_benchmark.utils.comm import synchronize
 from maskrcnn_benchmark.utils.comm import all_gather, get_rank, is_main_process
 from maskrcnn_benchmark.data.datasets.evaluation.coco.coco_eval import evaluate_coco
 
+import smdistributed.modelparallel.torch as smp
+
 def expand_masks_np(mask, padding):
     N = mask.shape[0]
     M = mask.shape[-1]
@@ -79,14 +81,28 @@ class Masker_NP(object):
             res = np.zeros((0, 1, masks.shape[-2], masks.shape[-1]))
         return res
     
+@smp.step
+def test(model, images):
+    with torch.no_grad():
+        output = model(images)
+    return output
+
 def infer_batch(model, images, targets, image_ids, dataset, cfg):
     device = torch.device(cfg.MODEL.DEVICE)
     cpu_device = torch.device("cpu")
     result_dict = {}
     images = images.to(device)
+    output = test(model, images)
     with torch.no_grad():
-        output = model(images)
-        output = [o.to(cpu_device) for o in output]
+        merged_output = []
+        mb = len(output[0])
+        mb_outputs = [[] for _ in range(mb)]
+        for o in output:
+            for i in range(mb):
+                mb_outputs[i].append(o[i])
+        for out in mb_outputs:
+            merged_output.extend(out)
+        output = [o.to(cpu_device) for o in merged_output]
     result_dict['masks'] = [prediction.get_field("mask").numpy() for prediction in output]
     result_dict['scores'] = [prediction.get_field("scores").numpy() for prediction in output]
     result_dict['labels'] = [prediction.get_field("labels").numpy() for prediction in output]
@@ -156,8 +172,9 @@ def infer_coco_eval(model, data_loader, cfg, pool_size=8):
             box_results.extend(image[1])
     process_pool.close()
     synchronize()
-    coco_results['segm'] = list(itertools.chain.from_iterable(all_gather(mask_results)))
-    coco_results['bbox'] = list(itertools.chain.from_iterable(all_gather(box_results)))
+    group = smp.DP_GROUP
+    coco_results['segm'] = list(itertools.chain.from_iterable(smp.allgather(mask_results, group)))
+    coco_results['bbox'] = list(itertools.chain.from_iterable(smp.allgather(box_results, group)))
     if is_main_process():
         eval_pool = Pool(2)
         mask_res = eval_pool.apply_async(evaluate_coco, 
@@ -169,4 +186,5 @@ def infer_coco_eval(model, data_loader, cfg, pool_size=8):
         eval_res = {'bbox': mask_res.get().results['bbox']['AP'],
                     'segm': segm_res.get().results['segm']['AP']}
         eval_pool.close()
+    synchronize()
     return eval_res

@@ -22,6 +22,8 @@ from mlperf_logging.mllog import constants
 import maskrcnn_benchmark.utils.comm as comm
 #from maskrcnn_benchmark.utils.herring_env import is_herring
 
+import smdistributed.modelparallel.torch as smp
+
 run_herring = False
 #if is_herring():
 #    import herring.torch as herring
@@ -67,9 +69,9 @@ def configure_logger(benchmark):
 
 def mlperf_submission_log(benchmark):
     required_dist_init = ['RANK', 'WORLD_SIZE', 'MASTER_ADDR', 'MASTER_PORT']
-    if not run_herring:
-        if all(var in os.environ for var in required_dist_init):
-            torch.distributed.init_process_group(backend='nccl', init_method='env://')
+    #if not run_herring:
+    #    if all(var in os.environ for var in required_dist_init):
+    #        torch.distributed.init_process_group(backend='nccl', init_method='env://')
 
     num_nodes = os.environ.get('SLURM_NNODES', 1)
 
@@ -106,9 +108,10 @@ def barrier():
     if run_herring:
         herring.barrier()
     else:
-        if torch.distributed.is_initialized():
-            torch.distributed.all_reduce(torch.cuda.FloatTensor(1))
-            torch.cuda.synchronize()
+        #if torch.distributed.is_initialized():
+        #    torch.distributed.all_reduce(torch.cuda.FloatTensor(1))
+        #    torch.cuda.synchronize()
+        smp.barrier()
 
 
 def get_rank():
@@ -118,11 +121,12 @@ def get_rank():
     if run_herring:
         return herring.get_rank()
     else:
-        if torch.distributed.is_initialized():
-            rank = torch.distributed.get_rank()
-        else:
-            rank = 0
-        return rank
+        #if torch.distributed.is_initialized():
+        #    rank = torch.distributed.get_rank()
+        #else:
+        #    rank = 0
+        #return rank
+        return smp.rank()
 
 def generate_seeds(rng, size):
     seeds = [rng.randint(0, 2**32 - 1) for _ in range(size)]
@@ -134,10 +138,16 @@ def broadcast_seeds(seeds, device):
         herring.broadcast(seeds_tensor, 0)
         seeds = seeds_tensor.tolist()
     else:
-        if torch.distributed.is_initialized():
+        #if torch.distributed.is_initialized():
+        #    seeds_tensor = torch.LongTensor(seeds).to(device)
+        #    torch.distributed.broadcast(seeds_tensor, 0)
+        #    seeds = seeds_tensor.tolist()
+        if smp.rank() == 0:
             seeds_tensor = torch.LongTensor(seeds).to(device)
-            torch.distributed.broadcast(seeds_tensor, 0)
-            seeds = seeds_tensor.tolist()
+            smp.broadcast(seeds_tensor, smp.WORLD)
+        else:
+            seeds_tensor = smp.recv_from(0, smp.RankType.WORLD_RANK)
+        seeds = seeds_tensor.tolist()
     return seeds
 
 

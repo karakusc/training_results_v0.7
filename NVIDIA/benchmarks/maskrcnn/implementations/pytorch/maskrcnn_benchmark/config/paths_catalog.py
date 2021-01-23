@@ -8,12 +8,12 @@ class DatasetCatalog(object):
     DATA_DIR = "datasets"
     DATASETS = {
         "coco_2017_train": {
-            "img_dir": "/home/ubuntu/coco/train2017",
-            "ann_file": "/home/ubuntu/coco/annotations/instances_train2017.json"
+            "img_dir": "/mask-rcnn-data/pytorch/train2017",
+            "ann_file": "/mask-rcnn-data/pytorch/annotations/instances_train2017.json"
         },
         "coco_2017_val": {
-            "img_dir": "/home/ubuntu/coco/val2017",
-            "ann_file": "/home/ubuntu/coco/annotations/instances_val2017.json"
+            "img_dir": "/mask-rcnn-data/pytorch/val2017",
+            "ann_file": "/mask-rcnn-data/pytorch/annotations/instances_val2017.json"
         },
         "coco_2014_train": {
             "img_dir": "coco/train2014",
