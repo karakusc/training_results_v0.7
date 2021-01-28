@@ -170,7 +170,7 @@ def do_train(
                 ).format(
                     eta=eta_string,
                     iter=iteration,
-                    next_eval=next_epoch,
+                    next_epoch=next_epoch,
                     meters=str(meters),
                     throughput=meters.throughput.global_avg,
                     lr=optimizer.param_groups[0]["lr"],

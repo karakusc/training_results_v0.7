@@ -410,15 +410,8 @@ def main():
     #num_gpus = int(os.environ["WORLD_SIZE"]) if "WORLD_SIZE" in os.environ else get_world_size()
     #args.distributed = num_gpus > 1
     # args.local_rank = get_local_rank()
-
-    smp_parameters = {
-    "partitions": 2,
-    "microbatches": 2,
-    "memory_weight": 1.0,
-    "ddp": True
-    }
     
-    smp.init(smp_parameters)
+    smp.init()
 
     num_gpus = smp.size()
     args.distributed = smp.dp_size() > 1
