@@ -93,7 +93,7 @@ class Checkpointer(object):
             # transpose to NCHW before saving as checkpoint if NHWC is used
             if nhwc:
                 transpose_checkpoint_model_state_nhwc_to_nchw(data["model"])
-                transpose_optimizer_state_nhwc_to_nchw(self.model, self.optimizer, data["optimizer"]["optimizer_state_dict"])
+                transpose_optimizer_state_nhwc_to_nchw(self.model, self.optimizer, data["optimizer"]["optimizer_state_dict"], partial_dict=save_partial)
             save_file = os.path.join(self.save_dir, "{}.pth".format(name))
             self.logger.info("Saving checkpoint to {}".format(save_file))
             smp.save(data, save_file, save_partial)
@@ -101,10 +101,7 @@ class Checkpointer(object):
             # Convert back to NHWC if NHWC layout is used, needed for optimizer buffers
             if nhwc:
                 if self.optimizer is not None:
-                    if save_partial: 
-                        transpose_optimizer_state_nchw_to_nhwc(self.model, self.optimizer, self.optimizer.local_state_dict())
-                    else:
-                        transpose_optimizer_state_nchw_to_nhwc(self.model, self.optimizer, self.optimizer.state_dict())
+                    transpose_optimizer_state_nchw_to_nhwc(self.model, self.optimizer, partial_dict=save_partial)
 
     def _load_fp16_optimizer(self, opt_state_dict):
         def param_name_to_index(self):
@@ -124,6 +121,7 @@ class Checkpointer(object):
             from functools import partial 
             optimizer.param_name_to_index = partial(param_name_to_index, optimizer)
             optimizer.load_state_dict(opt_state_dict['optimizer_state_dict'])
+            transpose_optimizer_state_nchw_to_nhwc(model, optimizer, partial_dict=True)
             
             optimizer.fp32_from_fp16 = opt_state_dict['fp32_from_fp16']
             optimizer.loss_scaler = opt_state_dict['loss_scaler']
@@ -144,6 +142,8 @@ class Checkpointer(object):
         if self.has_checkpoint():
             # override argument with existing checkpoint
             f = self.get_checkpoint_file()
+        else:
+            load_partial=False
         if not f:
             # no checkpoint could be found
             self.logger.info("No checkpoint found. Initializing model from scratch")
@@ -152,17 +152,25 @@ class Checkpointer(object):
         self.logger.info("Loading checkpoint from {}".format(f))
         checkpoint = self._load_file(f, load_partial)
         self._load_model(checkpoint, nhwc)
+
+        def init_params(mod, opt):
+            opt.init_master_params()
+
+        self.model.register_post_partition_hook(init_params)
+
         if model_only:
             return checkpoint
 
         if "optimizer" in checkpoint and self.optimizer:
             self.logger.info("Loading optimizer from {}".format(f))
             if isinstance(self.optimizer, FP16_Optimizer):
+                if not load_partial:
+                    raise ValueError("[SMP]FP16_Optimizer does not support load full checkpoint!")
                 self._load_fp16_optimizer(checkpoint.pop("optimizer"))
             else:
                 self.optimizer.load_state_dict(checkpoint.pop("optimizer"))
-            if nhwc:
-                transpose_optimizer_state_nchw_to_nhwc(self.model, self.optimizer, self.optimizer.state_dict())
+                if nhwc:
+                    transpose_optimizer_state_nchw_to_nhwc(self.model, self.optimizer, partial_dict=False)
         if "scheduler" in checkpoint and self.scheduler:
             self.logger.info("Loading scheduler from {}".format(f))
             self.scheduler.load_state_dict(checkpoint.pop("scheduler"))
@@ -192,8 +200,7 @@ class Checkpointer(object):
             f.write(last_filename)
 
     def _load_file(self, f, load_partial):
-        fname = f + "_" + str(smp.mp_rank())
-        return smp.load(fname, partial=load_partial)
+        return smp.load(f, partial=load_partial)
 
     def _load_model(self, checkpoint, nhwc):
         load_state_dict(self.model, checkpoint.pop("model"), nhwc)
@@ -247,7 +254,7 @@ def transpose_checkpoint_model_state_nhwc_to_nchw(model_dict):
         if needs_transpose:
             model_dict[k] = model_dict[k].permute(0,3,1,2).contiguous()
 
-def transpose_optimizer_state_nhwc_to_nchw(model, optimizer, optimizer_dict):
+def transpose_optimizer_state_nhwc_to_nchw(model, optimizer, optimizer_dict, partial_dict=True):
     param_id_to_index = optimizer._param_id_to_index()
     layer_id_to_name_map = {}
 
@@ -258,6 +265,12 @@ def transpose_optimizer_state_nhwc_to_nchw(model, optimizer, optimizer_dict):
             else:
                 idx = param_id_to_index[id(param)]
             layer_id_to_name_map[idx] = name
+
+    if not partial_dict:
+        # Get all params ids when save full
+        all_layer_id_to_name_map = smp.allgather(layer_id_to_name_map, smp.MP_GROUP)
+        for item in all_layer_id_to_name_map:
+            layer_id_to_name_map.update(item)
 
     for name, param in model.named_parameters():
         layer_id_to_name_map[id(param)] = name
@@ -269,7 +282,12 @@ def transpose_optimizer_state_nhwc_to_nchw(model, optimizer, optimizer_dict):
             optimizer_dict['state'][k]['exp_avg'] =  \
                         optimizer_dict['state'][k]['exp_avg'].permute(0,3,1,2).contiguous()
 
-def transpose_optimizer_state_nchw_to_nhwc(model, optimizer, optimizer_dict):
+def transpose_optimizer_state_nchw_to_nhwc(model, optimizer, partial_dict=True):
+    if partial_dict:
+        optimizer_dict = optimizer.local_state_dict()
+    else:
+        optimizer_dict = optimizer.state_dict()
+
     param_id_to_index = optimizer._param_id_to_index()
     layer_id_to_name_map = {}
 
@@ -280,6 +298,12 @@ def transpose_optimizer_state_nchw_to_nhwc(model, optimizer, optimizer_dict):
             else:
                 idx = param_id_to_index[id(param)]
             layer_id_to_name_map[idx] = name
+
+    if not partial_dict:
+        # Get all params ids when save full
+        all_layer_id_to_name_map = smp.allgather(layer_id_to_name_map, smp.MP_GROUP)
+        for item in all_layer_id_to_name_map:
+            layer_id_to_name_map.update(item)
 
     for name, param in model.named_parameters():
         layer_id_to_name_map[id(param)] = name

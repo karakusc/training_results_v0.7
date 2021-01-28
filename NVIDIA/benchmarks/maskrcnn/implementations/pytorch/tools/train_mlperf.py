@@ -19,6 +19,7 @@ import gc
 import glob
 
 import torch
+torch.multiprocessing.set_sharing_strategy('file_system')
 from maskrcnn_benchmark.config import cfg
 from maskrcnn_benchmark.data import make_data_loader
 from maskrcnn_benchmark.solver import make_lr_scheduler
@@ -301,23 +302,17 @@ def train(cfg, local_rank, distributed, random_number_generator=None):
             cfg, model, optimizer, scheduler, output_dir, save_to_disk
         )
         arguments["save_checkpoints"] = cfg.SAVE_CHECKPOINTS
-        extra_checkpoint_data = checkpointer.load(cfg.MODEL.WEIGHT, cfg.NHWC, load_partial=False, model_only=True)
+        extra_checkpoint_data = checkpointer.load(cfg.MODEL.WEIGHT, cfg.NHWC, load_partial=True, model_only=False)
         arguments.update(extra_checkpoint_data)
 
-        def init_params(mod, opt):
-            opt.init_master_params()
-
-        model.register_post_partition_hook(init_params)
     else:
         save_to_disk = get_rank() == 0
         checkpointer = DetectronCheckpointer(
             cfg, model, optimizer, scheduler, output_dir, save_to_disk
         )
         arguments["save_checkpoints"] = cfg.SAVE_CHECKPOINTS
-        extra_checkpoint_data = checkpointer.load(cfg.MODEL.WEIGHT, cfg.NHWC, load_partial=True)
+        extra_checkpoint_data = checkpointer.load(cfg.MODEL.WEIGHT, cfg.NHWC, load_partial=False, model_only=False)
         arguments.update(extra_checkpoint_data)
-
-    checkpointer.load(cfg.MODEL.WEIGHT, cfg.NHWC, load_partial=False, model_only=False)
 
     log_end(key=constants.INIT_STOP)
     barrier()
@@ -416,7 +411,14 @@ def main():
     #args.distributed = num_gpus > 1
     # args.local_rank = get_local_rank()
 
-    smp.init()
+    smp_parameters = {
+    "partitions": 2,
+    "microbatches": 2,
+    "memory_weight": 1.0,
+    "ddp": True
+    }
+    
+    smp.init(smp_parameters)
 
     num_gpus = smp.size()
     args.distributed = smp.dp_size() > 1

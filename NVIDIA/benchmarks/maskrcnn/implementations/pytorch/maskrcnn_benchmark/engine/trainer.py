@@ -156,12 +156,12 @@ def do_train(
         eta_string = str(datetime.timedelta(seconds=int(eta_seconds)))
 
         if iteration % 20 == 0 or iteration == max_iter:
-            next_eval = (iteration // iters_per_epoch + 1) * iters_per_epoch - iteration
+            next_epoch = (iteration // iters_per_epoch + 1) * iters_per_epoch - iteration
             logger.info(
                 meters.delimiter.join(
                     [
                         "eta: {eta}",
-                        "iter/next_eval: {iter}/{next_eval}",
+                        "iter/next_eval: {iter}/{next_epoch}",
                         "throughput: {throughput} img/sec",
                         "{meters}",
                         "lr: {lr:.6f}",
@@ -170,7 +170,7 @@ def do_train(
                 ).format(
                     eta=eta_string,
                     iter=iteration,
-                    next_eval=next_eval,
+                    next_eval=next_epoch,
                     meters=str(meters),
                     throughput=meters.throughput.global_avg,
                     lr=optimizer.param_groups[0]["lr"],
@@ -181,7 +181,8 @@ def do_train(
         # TODO add saving/checkpointing
         if iteration % checkpoint_period == 0 and arguments["save_checkpoints"]:
             arguments["save_partial"] = True 
-            checkpointer.save("model_{:07d}".format(iteration), **arguments)
+            checkpointer.save("model_{:07d}_partial".format(iteration), **arguments)
+            comm.synchronize()
 
         if iteration == max_iter and arguments["save_checkpoints"]:
             checkpointer.save("model_final", save_partial=False, **arguments)

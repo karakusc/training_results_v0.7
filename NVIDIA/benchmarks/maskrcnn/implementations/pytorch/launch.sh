@@ -28,6 +28,8 @@ mpirun --allow-run-as-root -np 8 python tools/train_mlperf.py --config-file 'con
  SOLVER.BETA1 ${BETA1} \
  SOLVER.BETA2 ${BETA2} \
  SOLVER.LR_SCHEDULE ${LR_SCHEDULE} \
+ SOLVER.CHECKPOINT_PERIOD 4000 \
+ SAVE_CHECKPOINTS False \
  TEST.IMS_PER_BATCH ${TEST_IMS_PER_BATCH} \
  NHWC True
 
