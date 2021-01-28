@@ -99,7 +99,7 @@ def _compute_aspect_ratios(dataset):
 
 
 def make_batch_data_sampler(
-    dataset, sampler, aspect_grouping, images_per_batch, num_iters=None, start_iter=0, random_number_generator=None, is_train=True
+    dataset, sampler, aspect_grouping, images_per_batch, num_iters=None, start_iter=0, random_number_generator=None, drop_last=True
 ):
     if aspect_grouping:
         if not isinstance(aspect_grouping, (list, tuple)):
@@ -107,11 +107,11 @@ def make_batch_data_sampler(
         aspect_ratios = _compute_aspect_ratios(dataset)
         group_ids = _quantize(aspect_ratios, aspect_grouping)
         batch_sampler = samplers.GroupedBatchSampler(
-            sampler, group_ids, images_per_batch, drop_uneven=is_train
+            sampler, group_ids, images_per_batch, drop_uneven=drop_last
         )
     else:
         batch_sampler = torch.utils.data.sampler.BatchSampler(
-            sampler, images_per_batch, drop_last=is_train
+            sampler, images_per_batch, drop_last=drop_last
         )
     if num_iters is not None:
         batch_sampler = samplers.IterationBasedBatchSampler(
@@ -174,7 +174,7 @@ def make_data_loader(cfg, is_train=True, is_distributed=False, start_iter=0, ran
     for dataset in datasets:
         sampler = make_data_sampler(dataset, shuffle, is_distributed)
         batch_sampler = make_batch_data_sampler(
-            dataset, sampler, aspect_grouping, images_per_gpu, num_iters, start_iter, random_number_generator, is_train,
+            dataset, sampler, aspect_grouping, images_per_gpu, num_iters, start_iter, random_number_generator,
         )
         collator = BatchCollator(cfg.DATALOADER.SIZE_DIVISIBILITY)
         num_workers = cfg.DATALOADER.NUM_WORKERS

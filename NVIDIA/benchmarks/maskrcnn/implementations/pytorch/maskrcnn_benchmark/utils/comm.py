@@ -60,6 +60,8 @@ def get_rank():
     #        return 0
     #    return dist.get_rank()
 
+def get_mp_rank():
+    return smp.mp_rank()
 
 def is_main_process():
     return smp.rank() == 0

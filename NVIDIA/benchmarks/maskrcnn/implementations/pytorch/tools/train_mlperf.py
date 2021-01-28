@@ -19,6 +19,7 @@ import gc
 import glob
 
 import torch
+torch.multiprocessing.set_sharing_strategy('file_system')
 from maskrcnn_benchmark.config import cfg
 from maskrcnn_benchmark.data import make_data_loader
 from maskrcnn_benchmark.solver import make_lr_scheduler
@@ -249,7 +250,6 @@ def train(cfg, local_rank, distributed, random_number_generator=None):
     #device = torch.device(cfg.MODEL.DEVICE)
     #model.to(device)
 
-    optimizer = make_optimizer(cfg, model)
 
     # Initialize mixed-precision training
     is_fp16 = (cfg.DTYPE == "float16")
@@ -257,6 +257,7 @@ def train(cfg, local_rank, distributed, random_number_generator=None):
         # convert model to FP16
         model.half()
 
+    optimizer = make_optimizer(cfg, model)
     # Optimizer logging
     log_event(key=constants.OPT_NAME, value=cfg.SOLVER.OPTIMIZER)
     log_event(key=constants.OPT_BASE_LR, value=cfg.SOLVER.BASE_LR)
@@ -285,30 +286,33 @@ def train(cfg, local_rank, distributed, random_number_generator=None):
     arguments["global_batch_size"] = cfg.SOLVER.IMS_PER_BATCH
     output_dir = cfg.OUTPUT_DIR
 
-    save_to_disk = get_rank() == 0
-    checkpointer = DetectronCheckpointer(
-        cfg, model, optimizer, scheduler, output_dir, save_to_disk
-    )
-    arguments["save_checkpoints"] = cfg.SAVE_CHECKPOINTS
-    
-    extra_checkpoint_data = checkpointer.load(cfg.MODEL.WEIGHT, cfg.NHWC)
-    arguments.update(extra_checkpoint_data)
-    
+
     if is_fp16:
         #import apex
-        from fp16.fp16 import FP16_Optimizer
+        from maskrcnn_benchmark.fp16.fp16 import FP16_Optimizer
         #optimizer = apex.fp16_utils.fp16_optimizer.FP16_Optimizer(model, optimizer, dynamic_loss_scale=True)
         dynamic_loss_args = {'scale_window': 1000,
                              'min_scale': 1,
                              'delayed_shift': 2}
 
-        #optimizer = smp.DistributedOptimizer(optimizer)
         optimizer = smp.DistributedOptimizer(FP16_Optimizer(model, optimizer, dynamic_loss_scale=True, dynamic_loss_args=dynamic_loss_args ))
 
-        def init_params(mod, opt):
-            opt.init_master_params()
+        save_to_disk = get_rank() == 0
+        checkpointer = DetectronCheckpointer(
+            cfg, model, optimizer, scheduler, output_dir, save_to_disk
+        )
+        arguments["save_checkpoints"] = cfg.SAVE_CHECKPOINTS
+        extra_checkpoint_data = checkpointer.load(cfg.MODEL.WEIGHT, cfg.NHWC, load_partial=True, model_only=False)
+        arguments.update(extra_checkpoint_data)
 
-        model.register_post_partition_hook(init_params)
+    else:
+        save_to_disk = get_rank() == 0
+        checkpointer = DetectronCheckpointer(
+            cfg, model, optimizer, scheduler, output_dir, save_to_disk
+        )
+        arguments["save_checkpoints"] = cfg.SAVE_CHECKPOINTS
+        extra_checkpoint_data = checkpointer.load(cfg.MODEL.WEIGHT, cfg.NHWC, load_partial=False, model_only=False)
+        arguments.update(extra_checkpoint_data)
 
     log_end(key=constants.INIT_STOP)
     barrier()
@@ -406,7 +410,7 @@ def main():
     #num_gpus = int(os.environ["WORLD_SIZE"]) if "WORLD_SIZE" in os.environ else get_world_size()
     #args.distributed = num_gpus > 1
     # args.local_rank = get_local_rank()
-
+    
     smp.init()
 
     num_gpus = smp.size()

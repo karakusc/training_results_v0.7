@@ -208,6 +208,7 @@ class FP16_Optimizer(object):
         self.dynamic_loss_scale = dynamic_loss_scale
         self.dynamic_loss_args = dynamic_loss_args
         self.use_smp = use_smp
+        self.id_trans = {}
         if not self.use_smp:
             self.init_master_params()
 
@@ -215,6 +216,7 @@ class FP16_Optimizer(object):
 
         if self.use_smp:
             torch.cuda.set_device(smp.local_rank())
+        self.fp32paramid_from_fp16paramid = {}
 
         for i, param_group in enumerate(self.optimizer.param_groups):
             self.maybe_print("FP16_Optimizer processing param group {}:".format(i))
@@ -232,11 +234,13 @@ class FP16_Optimizer(object):
                         # Copythe model parallel flag.
                         #master_param.model_parallel = param.model_parallel
                         param_group['params'][i] = master_param
+                        self.id_trans[id(param)] = id(master_param)
                         fp32_from_fp16_params_this_group.append(master_param)
                         # Reset existing state dict key to the new master param.
                         # We still need to recast per-param state tensors, if any, to FP32.
                         if param in self.optimizer.state:
                             self.optimizer.state[master_param] = self.optimizer.state.pop(param)
+                        self.fp32paramid_from_fp16paramid[id(param)] = id(master_param)
                     elif param.type() in ['torch.cuda.FloatTensor', 'torch.FloatTensor']:
                         self.maybe_print("FP16_Optimizer received torch.cuda.FloatTensor with {}"
                                          .format(param.size()))
